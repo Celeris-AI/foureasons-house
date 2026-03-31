@@ -922,7 +922,19 @@
       }, 800);
     }
 
-    recordBtn.addEventListener("click", enterRecordingMode);
+    recordBtn.addEventListener("click", async () => {
+
+  try {
+    await document.documentElement.requestFullscreen();
+  } catch(e) {}
+
+  document.body.classList.add("recording");
+
+  setTimeout(() => {
+    startMusicAndSeasonCycle();
+  }, 3000);
+
+});
 
     playBtn.addEventListener("click", togglePlay);
     document.querySelectorAll(".season-btn").forEach(btn => {
