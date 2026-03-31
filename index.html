@@ -74,7 +74,7 @@
 </head>
 <body>
   <div id="info" class="ui">
-    <b>🏠🔮☁️🌌 季節オルゴール同期版</b><br>
+    <b>🏠🔮☁️🌌 季節オルゴール同期版（F11録画対応）</b><br>
     ドラッグ: 視点回転<br>
     ホイール: 拡大縮小<br>
     Rキー: 回転ON/OFF<br>
@@ -906,35 +906,32 @@
       document.body.classList.add("recording");
       controls.enabled = false;
       statusLine.textContent = "録画モード準備中…";
-      try {
-        if (!document.fullscreenElement) {
-          await document.documentElement.requestFullscreen();
+
+      if (!audio.src) loadTrack(currentTrackIndex, false);
+
+      if (audio) {
+        audio.currentTime = 0;
+        audio.volume = 0;
+        try {
+          await audio.play();
+          isPlaying = true;
+          playBtn.textContent = "⏸ 一時停止";
+        } catch (e) {
+          console.log("audio play blocked:", e);
+          statusLine.textContent = "音声の再生がブロックされました。F11後に再度録画モードを押してください。";
+          return;
         }
-      } catch (e) {
-        // フルスクリーン非対応でも続行
       }
-      setTimeout(async () => {
-        if (!audio.src) loadTrack(currentTrackIndex, false);
-        if (audio.paused) {
-          await togglePlay();
+
+      setTimeout(() => {
+        if (audio) {
+          audio.volume = 1;
         }
         statusLine.textContent = "録画モード再生中";
-      }, 800);
+      }, 3000);
     }
 
-    recordBtn.addEventListener("click", async () => {
-
-  try {
-    await document.documentElement.requestFullscreen();
-  } catch(e) {}
-
-  document.body.classList.add("recording");
-
-  setTimeout(() => {
-    startMusicAndSeasonCycle();
-  }, 3000);
-
-});
+    recordBtn.addEventListener("click", enterRecordingMode);
 
     playBtn.addEventListener("click", togglePlay);
     document.querySelectorAll(".season-btn").forEach(btn => {
