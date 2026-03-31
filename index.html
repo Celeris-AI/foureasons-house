@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -50,6 +49,18 @@
       .season-btn, .control-btn { flex:1 1 calc(50% - 8px); min-width:120px; }
       #chips { bottom:14px; }
     }
+
+    .ui { }
+    #record-btn {
+      background: rgba(255,235,210,0.92);
+    }
+    body.recording .ui {
+      display: none !important;
+    }
+    body.recording {
+      cursor: none;
+    }
+
   </style>
 
   <script type="importmap">
@@ -62,7 +73,7 @@
   </script>
 </head>
 <body>
-  <div id="info">
+  <div id="info" class="ui">
     <b>🏠🔮☁️🌌 季節オルゴール同期版</b><br>
     ドラッグ: 視点回転<br>
     ホイール: 拡大縮小<br>
@@ -72,15 +83,16 @@
     <span id="status-line">待機中</span>
   </div>
 
-  <div id="season-ui">
+  <div id="season-ui" class="ui">
     <button class="season-btn active" data-season="spring">🌸 春</button>
     <button class="season-btn" data-season="summer">☀️ 夏</button>
     <button class="season-btn" data-season="autumn">🍁 秋</button>
     <button class="season-btn" data-season="winter">❄️ 冬</button>
     <button class="control-btn" id="play-btn">▶ 再生</button>
+    <button class="control-btn" id="record-btn">🎬 録画モード</button>
   </div>
 
-  <div id="chips">
+  <div id="chips" class="ui">
     <span class="chip" id="time-chip">時間帯: 昼</span>
     <span class="chip" id="track-chip">曲: 未再生</span>
     <span class="chip" id="remain-chip">残り: --:--</span>
@@ -99,6 +111,7 @@
     const remainChip = document.getElementById("remain-chip");
     const phaseChip = document.getElementById("phase-chip");
     const playBtn = document.getElementById("play-btn");
+    const recordBtn = document.getElementById("record-btn");
     const audio = document.getElementById("season-audio");
 
     // -----------------------------
@@ -887,6 +900,29 @@
         statusLine.textContent = `一時停止: ${playlist[currentTrackIndex].file}`;
       }
     }
+
+
+    async function enterRecordingMode() {
+      document.body.classList.add("recording");
+      controls.enabled = false;
+      statusLine.textContent = "録画モード準備中…";
+      try {
+        if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
+        }
+      } catch (e) {
+        // フルスクリーン非対応でも続行
+      }
+      setTimeout(async () => {
+        if (!audio.src) loadTrack(currentTrackIndex, false);
+        if (audio.paused) {
+          await togglePlay();
+        }
+        statusLine.textContent = "録画モード再生中";
+      }, 800);
+    }
+
+    recordBtn.addEventListener("click", enterRecordingMode);
 
     playBtn.addEventListener("click", togglePlay);
     document.querySelectorAll(".season-btn").forEach(btn => {
