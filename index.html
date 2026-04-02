@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Ocean Coral - Auto Record Full Background</title>
+<title>Ocean Coral - Stable Record Version</title>
 
 <style>
   html, body {
@@ -39,19 +39,18 @@
     position: fixed;
     inset: 0;
     z-index: 100;
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
-    background:
-      radial-gradient(circle at center, rgba(10,30,50,0.35), rgba(0,0,0,0.72));
+    background: radial-gradient(circle at center, rgba(10,30,50,0.25), rgba(0,0,0,0.62));
     color: white;
     text-align: center;
     padding: 24px;
     cursor: pointer;
   }
 
-  #startOverlay.show {
-    display: flex;
+  #startOverlay.hidden {
+    display: none;
   }
 
   #startCard {
@@ -86,15 +85,14 @@
 </head>
 <body>
 
-<div id="status">読み込み中…</div>
+<div id="status">背景と映像を読み込み中…</div>
 
 <div id="startOverlay">
   <div id="startCard">
-    <h1>🎵 クリックで自動開始</h1>
+    <h1>🪸🎵 クリックで開始</h1>
     <p>
-      ブラウザの制限で完全自動再生できない場合があります。<br>
-      そのときはここを1回クリックすると、音楽＋録画が自動で始まり、
-      曲の終了で自動保存されます。
+      背景が見えていれば準備OKです。<br>
+      クリックすると、音楽つき録画が始まり、3分30秒後に自動保存されます。
     </p>
   </div>
 </div>
@@ -105,10 +103,10 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-const RECORD_SECONDS = 210; // 3分30秒
+const RECORD_SECONDS = 210;
 const statusEl = document.getElementById("status");
-const bgm = document.getElementById("bgm");
 const startOverlay = document.getElementById("startOverlay");
+const bgm = document.getElementById("bgm");
 
 const scene = new THREE.Scene();
 
@@ -122,8 +120,7 @@ camera.position.set(0, 2.7, 14);
 
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
-  alpha: false,
-  preserveDrawingBuffer: false
+  alpha: false
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -155,7 +152,6 @@ scene.add(fillLight);
 
 /* ==========
    背景
-   sea_bg.png を画面全体に cover 表示
 ========== */
 const bgGroup = new THREE.Group();
 scene.add(bgGroup);
@@ -178,8 +174,10 @@ loader.load("sea_bg.png", (texture) => {
   bgGroup.add(bgPlane);
 
   fitBackgroundToView(texture);
+  statusEl.textContent = "準備OK：中央をクリックで録画開始";
 }, undefined, (err) => {
-  console.error("sea_bg.png の読み込みに失敗:", err);
+  console.error("sea_bg.png の読み込み失敗", err);
+  statusEl.textContent = "sea_bg.png の読み込みに失敗しました";
 });
 
 function fitBackgroundToView(texture) {
@@ -207,7 +205,7 @@ function fitBackgroundToView(texture) {
   bgPlane.scale.set(planeWidth, planeHeight, 1);
 }
 
-/* 海面前景トーン */
+/* 海前景 */
 const frontOceanPlane = new THREE.Mesh(
   new THREE.PlaneGeometry(40, 12),
   new THREE.MeshBasicMaterial({
@@ -220,7 +218,6 @@ const frontOceanPlane = new THREE.Mesh(
 frontOceanPlane.position.set(0, -4.4, -8);
 scene.add(frontOceanPlane);
 
-/* 水面きらめきテクスチャ */
 function makeShimmerTexture() {
   const canvas = document.createElement("canvas");
   canvas.width = 512;
@@ -272,7 +269,7 @@ world.position.set(0, -0.95, -6.25);
 scene.add(world);
 
 /* ==========
-   サンゴ礁
+   サンゴ
 ========== */
 const coralGroup = new THREE.Group();
 coralGroup.position.set(0, -3.42, 0.70);
@@ -294,9 +291,7 @@ coral.position.set(0, 1.12, 0);
 coral.renderOrder = 20;
 coralGroup.add(coral);
 
-/* ==========
-   水面
-========== */
+/* 水面 */
 const waterPlane = new THREE.Mesh(
   new THREE.CircleGeometry(2.7, 80),
   new THREE.MeshBasicMaterial({
@@ -325,7 +320,7 @@ waterGlow.position.set(0, -3.52, 0);
 world.add(waterGlow);
 
 /* ==========
-   パーティクル用テクスチャ
+   テクスチャ
 ========== */
 function makePetalTexture() {
   const canvas = document.createElement("canvas");
@@ -475,7 +470,6 @@ function resetSeasonParticle(p, zone, first = false) {
   p.material.map = zone.texture;
   p.material.opacity = zone.opacity;
   p.material.rotation = Math.random() * Math.PI;
-  p.material.needsUpdate = true;
 
   const s = zone.scaleMin + Math.random() * (zone.scaleMax - zone.scaleMin);
   p.scale.set(s, s, 1);
@@ -528,14 +522,24 @@ function updateSeasonParticles(t) {
   }
 }
 
-/* ==========
-   けむり
-========== */
+/* けむり */
 const smokeGroup = new THREE.Group();
 coralGroup.add(smokeGroup);
 
 const smokeParticles = [];
-const smokeCount = 28;
+for (let i = 0; i < 28; i++) {
+  const mat = new THREE.SpriteMaterial({
+    map: texSmoke,
+    transparent: true,
+    opacity: 0.42,
+    depthWrite: false
+  });
+  const sp = new THREE.Sprite(mat);
+  sp.renderOrder = 21;
+  smokeGroup.add(sp);
+  smokeParticles.push(sp);
+  resetSmoke(sp, true);
+}
 
 function resetSmoke(p, first = false) {
   p.position.set(
@@ -548,20 +552,6 @@ function resetSmoke(p, first = false) {
   p.scale.set(s, s, 1);
   p.material.opacity = 0.30 + Math.random() * 0.14;
   p.userData.seed = Math.random() * Math.PI * 2;
-}
-
-for (let i = 0; i < smokeCount; i++) {
-  const mat = new THREE.SpriteMaterial({
-    map: texSmoke,
-    transparent: true,
-    opacity: 0.42,
-    depthWrite: false
-  });
-  const sp = new THREE.Sprite(mat);
-  sp.renderOrder = 21;
-  smokeGroup.add(sp);
-  smokeParticles.push(sp);
-  resetSmoke(sp, true);
 }
 
 function updateSmoke(t) {
@@ -579,9 +569,7 @@ function updateSmoke(t) {
   }
 }
 
-/* ==========
-   船
-========== */
+/* 船 */
 function makeShip(filename, x, y, z, width, height, dir, speed) {
   const tex = loader.load(filename);
   const mesh = new THREE.Mesh(
@@ -599,13 +587,13 @@ function makeShip(filename, x, y, z, width, height, dir, speed) {
 }
 
 const RIGHT_OUT = 30;
-const LEFT_OUT  = -30;
+const LEFT_OUT = -30;
 
 const ships = [
   makeShip("ship1.png", RIGHT_OUT + 2.0, -2.98, -1.00, 2.55, 1.74, -1, 0.026),
   makeShip("ship2.png", RIGHT_OUT + 8.0, -3.08, -1.18, 2.23, 1.54, -1, 0.020),
-  makeShip("ship3.png", LEFT_OUT  - 2.0, -2.94, -0.90, 2.43, 1.64,  1, 0.024),
-  makeShip("ship4.png", LEFT_OUT  - 8.0, -3.10, -1.26, 2.12, 1.46,  1, 0.018)
+  makeShip("ship3.png", LEFT_OUT - 2.0, -2.94, -0.90, 2.43, 1.64, 1, 0.024),
+  makeShip("ship4.png", LEFT_OUT - 8.0, -3.10, -1.26, 2.12, 1.46, 1, 0.018)
 ];
 
 ships.forEach(s => {
@@ -629,9 +617,7 @@ function updateShips(t) {
   });
 }
 
-/* ==========
-   きらめき
-========== */
+/* きらめき */
 const sparkleGroup = new THREE.Group();
 world.add(sparkleGroup);
 
@@ -666,18 +652,14 @@ for (let i = 0; i < 16; i++) {
 /* ==========
    録画
 ========== */
+let audioCtx = null;
+let audioSourceNode = null;
 let mediaRecorder = null;
 let recordedChunks = [];
 let isRecording = false;
-let audioCtx = null;
-let started = false;
-let audioSourceNode = null;
 let autoStopTimer = null;
 
-async function beginAutoRecording() {
-  if (started) return;
-  started = true;
-
+async function startAll() {
   try {
     statusEl.textContent = "録画準備中…";
 
@@ -688,43 +670,37 @@ async function beginAutoRecording() {
       await audioCtx.resume();
     }
 
-    bgm.currentTime = 0;
-    bgm.loop = false;
-    bgm.volume = 1.0;
-
-    const canvasStream = renderer.domElement.captureStream(60);
-
-    const destination = audioCtx.createMediaStreamDestination();
-
     if (!audioSourceNode) {
       audioSourceNode = audioCtx.createMediaElementSource(bgm);
     }
 
+    const destination = audioCtx.createMediaStreamDestination();
     audioSourceNode.connect(destination);
     audioSourceNode.connect(audioCtx.destination);
 
+    const canvasStream = renderer.domElement.captureStream(60);
     const mixedStream = new MediaStream();
+
     canvasStream.getVideoTracks().forEach(track => mixedStream.addTrack(track));
     destination.stream.getAudioTracks().forEach(track => mixedStream.addTrack(track));
 
+    let mimeType = "";
     const mimeTypes = [
       "video/webm;codecs=vp9,opus",
       "video/webm;codecs=vp8,opus",
       "video/webm"
     ];
-
-    let selectedMimeType = "";
     for (const type of mimeTypes) {
       if (MediaRecorder.isTypeSupported(type)) {
-        selectedMimeType = type;
+        mimeType = type;
         break;
       }
     }
 
     mediaRecorder = new MediaRecorder(
       mixedStream,
-      selectedMimeType
-        ? { mimeType: selectedMimeType, videoBitsPerSecond: 12000000 }
+      mimeType
+        ? { mimeType, videoBitsPerSecond: 12000000 }
         : { videoBitsPerSecond: 12000000 }
     );
 
@@ -741,65 +717,56 @@ async function beginAutoRecording() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "ocean_coral_auto_record.webm";
+      a.download = "ocean_coral_record.webm";
       document.body.appendChild(a);
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 4000);
 
-      statusEl.textContent = "自動保存しました ✨";
+      statusEl.textContent = "保存しました ✨";
       isRecording = false;
     };
+
+    bgm.currentTime = 0;
+    bgm.loop = false;
+    bgm.volume = 1.0;
 
     mediaRecorder.start(200);
     await bgm.play();
 
     isRecording = true;
-    statusEl.textContent = "録画中… 曲の終了で自動保存されます 🎵";
+    statusEl.textContent = "録画中… 3分30秒後に自動保存されます 🎵";
 
-    if (autoStopTimer) clearTimeout(autoStopTimer);
     autoStopTimer = setTimeout(() => {
-      stopRecording();
+      stopAll();
     }, RECORD_SECONDS * 1000);
 
   } catch (err) {
     console.error(err);
-    started = false;
-    startOverlay.classList.add("show");
-    statusEl.textContent = "クリックで開始してください";
+    statusEl.textContent = "開始に失敗しました。music.mp3 やブラウザ設定を確認してください";
+    startOverlay.classList.remove("hidden");
   }
 }
 
-function stopRecording() {
+function stopAll() {
   if (!isRecording) return;
 
-  try {
-    bgm.pause();
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      mediaRecorder.stop();
-    }
-    statusEl.textContent = "保存中…";
-  } catch (err) {
-    console.error(err);
-    statusEl.textContent = "停止時にエラーが発生しました";
+  bgm.pause();
+
+  if (mediaRecorder && mediaRecorder.state !== "inactive") {
+    mediaRecorder.stop();
   }
+
+  statusEl.textContent = "保存中…";
 }
 
 bgm.addEventListener("ended", () => {
-  if (isRecording) stopRecording();
+  if (isRecording) stopAll();
 });
 
 startOverlay.addEventListener("click", async () => {
-  startOverlay.classList.remove("show");
-  await beginAutoRecording();
-});
-
-window.addEventListener("load", async () => {
-  try {
-    await beginAutoRecording();
-  } catch (e) {
-    console.error(e);
-  }
+  startOverlay.classList.add("hidden");
+  await startAll();
 });
 
 /* ==========
@@ -822,7 +789,6 @@ function animate() {
   shimmerPlane.material.opacity = 0.36 + Math.sin(t * 1.6) * 0.12;
   shimmerPlane.position.y = -4.6 + Math.sin(t * 0.7) * 0.06;
   shimmerTexture.offset.y -= 0.0009;
-  shimmerTexture.needsUpdate = true;
 
   sparkleGroup.children.forEach((p, i) => {
     p.position.y = p.userData.baseY + Math.sin(t * 1.7 + p.userData.phase) * 0.025;
