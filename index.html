@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Ocean House - Rising Light Particles</title>
+<title>Ocean House - Ships and Seasonal Layout</title>
 
 <style>
   html, body {
@@ -28,7 +28,6 @@
     z-index: 4;
   }
 
-  /* 海面の前景は薄く残す */
   #ocean-front {
     position: fixed;
     inset: 0;
@@ -94,30 +93,6 @@
     50%  { transform: translateY(8px) scaleY(1.02); }
     100% { transform: translateY(0) scaleY(1); }
   }
-
-  #ui {
-    position: fixed;
-    top: 14px;
-    right: 14px;
-    z-index: 10;
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  button {
-    border: none;
-    padding: 10px 14px;
-    border-radius: 999px;
-    background: rgba(255,255,255,0.88);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-    cursor: pointer;
-    font-size: 14px;
-  }
-
-  button.active {
-    background: rgba(255,245,220,0.96);
-  }
 </style>
 
 <script type="importmap">
@@ -132,14 +107,6 @@
 <body>
 
 <div id="bg-back"></div>
-
-<div id="ui">
-  <button class="season-btn active" data-season="spring">🌸 桜</button>
-  <button class="season-btn" data-season="summer">✨ 光</button>
-  <button class="season-btn" data-season="autumn">🍁 モミジ</button>
-  <button class="season-btn" data-season="winter">❄️ 雪</button>
-</div>
-
 <div id="ocean-front"></div>
 <div id="water-shimmer"></div>
 
@@ -169,6 +136,7 @@ document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
+controls.enableRotate = false;
 controls.target.set(0, -1.15, -6.2);
 
 /* ==========
@@ -282,7 +250,7 @@ const chimney = new THREE.Mesh(
     roughness: 0.95
   })
 );
-chimney.position.set(0.50, 2.1, 0.2);
+chimney.position.set(0.50, 2.10, 0.20);
 houseGroup.add(chimney);
 
 /* ==========
@@ -313,7 +281,7 @@ function makeTree(x, z, trunkColor, leafColor) {
 }
 
 houseGroup.add(makeTree(-1.08, 0.34, 0x6d4a30, 0x76bd62));
-houseGroup.add(makeTree(1.08, 0.20, 0x6d4a30, 0x69b857));
+houseGroup.add(makeTree( 1.08, 0.20, 0x6d4a30, 0x69b857));
 
 /* ==========
    水面
@@ -346,7 +314,7 @@ waterGlow.position.set(0, -3.52, 0);
 world.add(waterGlow);
 
 /* ==========
-   季節テクスチャ
+   テクスチャ
 ========== */
 function makePetalTexture() {
   const canvas = document.createElement("canvas");
@@ -445,197 +413,207 @@ function makeSnowTexture() {
   return new THREE.CanvasTexture(canvas);
 }
 
-const seasonTextures = {
-  spring: makePetalTexture(),
-  summer: makeGlowTexture(),
-  autumn: makeLeafTexture(),
-  winter: makeSnowTexture()
-};
+function makeSmokeTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext("2d");
 
-const seasonConfigs = {
-  spring: {
-    map: seasonTextures.spring,
-    opacity: 0.95,
-    scaleMin: 0.24,
-    scaleMax: 0.36,
-    riseSpeed: 0.010,
-    driftX: 0.006,
-    driftZ: 0.001
-  },
-  summer: {
-    map: seasonTextures.summer,
-    opacity: 0.88,
-    scaleMin: 0.15,
-    scaleMax: 0.24,
-    riseSpeed: 0.012,
-    driftX: 0.003,
-    driftZ: 0.001
-  },
-  autumn: {
-    map: seasonTextures.autumn,
-    opacity: 0.93,
-    scaleMin: 0.25,
-    scaleMax: 0.36,
-    riseSpeed: 0.009,
-    driftX: 0.004,
-    driftZ: 0.003
-  },
-  winter: {
-    map: seasonTextures.winter,
-    opacity: 0.92,
-    scaleMin: 0.18,
-    scaleMax: 0.28,
-    riseSpeed: 0.008,
-    driftX: 0.002,
-    driftZ: 0.0008
-  }
-};
+  const grad = ctx.createRadialGradient(64, 64, 8, 64, 64, 50);
+  grad.addColorStop(0, "rgba(255,255,255,0.55)");
+  grad.addColorStop(0.55, "rgba(220,225,235,0.30)");
+  grad.addColorStop(1, "rgba(180,190,205,0)");
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(64, 64, 50, 0, Math.PI * 2);
+  ctx.fill();
 
-let currentSeason = "spring";
+  return new THREE.CanvasTexture(canvas);
+}
+
+const texSakura = makePetalTexture();
+const texLight  = makeGlowTexture();
+const texLeaf   = makeLeafTexture();
+const texSnow   = makeSnowTexture();
+const texSmoke  = makeSmokeTexture();
 
 /* ==========
-   海から上へ上がる光子
+   桜 → 光 → 家 → もみじ → 雪
 ========== */
-const particleGroup = new THREE.Group();
-world.add(particleGroup);
+const zoneConfigs = [
+  { texture: texSakura, xMin: -2.55, xMax: -1.35, yMin: -3.30, yMax: 1.8, opacity: 0.95, scaleMin: 0.22, scaleMax: 0.34, speed: 0.010, kind: "sakura" },
+  { texture: texLight,  xMin: -1.15, xMax: -0.25, yMin: -3.20, yMax: 2.1, opacity: 0.88, scaleMin: 0.14, scaleMax: 0.22, speed: 0.013, kind: "light"  },
+  { texture: texLeaf,   xMin:  0.35, xMax:  1.25, yMin: -3.30, yMax: 1.8, opacity: 0.93, scaleMin: 0.22, scaleMax: 0.34, speed: 0.010, kind: "leaf"   },
+  { texture: texSnow,   xMin:  1.45, xMax:  2.55, yMin: -3.25, yMax: 1.9, opacity: 0.92, scaleMin: 0.16, scaleMax: 0.25, speed: 0.008, kind: "snow"   }
+];
 
-const particleCount = 180;
-const particles = [];
+const seasonalGroup = new THREE.Group();
+world.add(seasonalGroup);
 
-function resetParticle(sprite, first = false) {
-  const spawnRadius = 2.15;
-  const angle = Math.random() * Math.PI * 2;
-  const radius = Math.sqrt(Math.random()) * spawnRadius;
+const seasonalParticles = [];
 
-  const x = Math.cos(angle) * radius;
-  const z = Math.sin(angle) * radius;
+function resetSeasonParticle(p, zone, first=false) {
+  p.userData.zone = zone;
 
-  // 海面近くからスタート
-  const y = first
-    ? -3.35 + Math.random() * 5.4
-    : -3.42 + Math.random() * 0.10;
+  p.position.x = zone.xMin + Math.random() * (zone.xMax - zone.xMin);
+  p.position.z = (Math.random() - 0.5) * 1.2;
+  p.position.y = first
+    ? zone.yMin + Math.random() * (zone.yMax - zone.yMin)
+    : zone.yMin + Math.random() * 0.12;
 
-  sprite.position.set(x, y, z);
-  sprite.material.rotation = Math.random() * Math.PI;
+  p.material.map = zone.texture;
+  p.material.opacity = zone.opacity;
+  p.material.rotation = Math.random() * Math.PI;
+  p.material.needsUpdate = true;
 
-  const cfg = seasonConfigs[currentSeason];
-  const s = cfg.scaleMin + Math.random() * (cfg.scaleMax - cfg.scaleMin);
-  sprite.scale.set(s, s, 1);
+  const s = zone.scaleMin + Math.random() * (zone.scaleMax - zone.scaleMin);
+  p.scale.set(s, s, 1);
 
-  sprite.userData.vx = (Math.random() - 0.5) * 0.004;
-  sprite.userData.vz = (Math.random() - 0.5) * 0.004;
-  sprite.userData.seed = Math.random() * Math.PI * 2;
+  p.userData.seed = Math.random() * Math.PI * 2;
 }
 
-for (let i = 0; i < particleCount; i++) {
-  const mat = new THREE.SpriteMaterial({
-    map: seasonTextures.spring,
-    transparent: true,
-    opacity: 0.95,
-    depthWrite: false,
-    depthTest: true,
-    color: 0xffffff
-  });
-
-  const sprite = new THREE.Sprite(mat);
-  particleGroup.add(sprite);
-  particles.push(sprite);
-  resetParticle(sprite, true);
-}
-
-function setSeason(name) {
-  currentSeason = name;
-  const cfg = seasonConfigs[name];
-
-  particles.forEach((p) => {
-    p.material.map = cfg.map;
-    p.material.opacity = cfg.opacity;
-    p.material.needsUpdate = true;
-
-    const s = cfg.scaleMin + Math.random() * (cfg.scaleMax - cfg.scaleMin);
-    p.scale.set(s, s, 1);
-  });
-
-  document.querySelectorAll(".season-btn").forEach(btn => {
-    btn.classList.toggle("active", btn.dataset.season === name);
-  });
-}
-
-document.querySelectorAll(".season-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    setSeason(btn.dataset.season);
-  });
+zoneConfigs.forEach(zone => {
+  const count = zone.kind === "light" ? 40 : 48;
+  for (let i = 0; i < count; i++) {
+    const mat = new THREE.SpriteMaterial({
+      map: zone.texture,
+      transparent: true,
+      opacity: zone.opacity,
+      depthWrite: false,
+      depthTest: true,
+      color: 0xffffff
+    });
+    const sprite = new THREE.Sprite(mat);
+    seasonalGroup.add(sprite);
+    seasonalParticles.push(sprite);
+    resetSeasonParticle(sprite, zone, true);
+  }
 });
 
-function updateParticles(t) {
-  const cfg = seasonConfigs[currentSeason];
-  const topY = 2.2;
+function updateSeasonParticles(t) {
+  for (const p of seasonalParticles) {
+    const z = p.userData.zone;
 
-  for (let i = 0; i < particles.length; i++) {
-    const p = particles[i];
+    p.position.y += z.speed + Math.random() * 0.0015;
 
-    p.position.y += cfg.riseSpeed + Math.random() * 0.002;
-    p.position.x += p.userData.vx + Math.sin(t * 1.2 + p.userData.seed + i) * cfg.driftX * 0.15;
-    p.position.z += p.userData.vz + Math.cos(t * 1.0 + p.userData.seed + i) * cfg.driftZ * 0.20;
-
-    if (currentSeason === "spring") {
+    if (z.kind === "sakura") {
+      p.position.x += Math.sin(t * 1.8 + p.userData.seed) * 0.004;
       p.material.rotation += 0.01;
-      p.position.x += Math.sin(t * 1.8 + i) * 0.004;
-    } else if (currentSeason === "summer") {
-      p.material.rotation += 0.003;
-      p.position.y += Math.sin(t * 2.6 + i) * 0.002;
-    } else if (currentSeason === "autumn") {
-      p.material.rotation += 0.016;
-      p.position.x += Math.sin(t * 1.9 + i) * 0.005;
-      p.position.z += Math.cos(t * 1.6 + i) * 0.004;
-    } else if (currentSeason === "winter") {
+    } else if (z.kind === "light") {
+      p.position.x += Math.sin(t * 2.4 + p.userData.seed) * 0.0025;
+      p.position.y += Math.sin(t * 2.6 + p.userData.seed) * 0.0018;
+      p.material.rotation += 0.002;
+    } else if (z.kind === "leaf") {
+      p.position.x += Math.sin(t * 1.7 + p.userData.seed) * 0.0035;
+      p.position.z += Math.cos(t * 1.4 + p.userData.seed) * 0.003;
+      p.material.rotation += 0.015;
+    } else if (z.kind === "snow") {
+      p.position.x += Math.sin(t * 1.2 + p.userData.seed) * 0.0018;
       p.material.rotation += 0.004;
-      p.position.x += Math.sin(t * 1.2 + i) * 0.002;
     }
 
-    if (p.position.y > topY) {
-      resetParticle(p, false);
+    if (p.position.y > z.yMax) {
+      resetSeasonParticle(p, z, false);
     }
   }
 }
 
 /* ==========
-   船（右→左のみ）
+   煙突のけむり
+========== */
+const smokeGroup = new THREE.Group();
+houseGroup.add(smokeGroup);
+
+const smokeParticles = [];
+const smokeCount = 26;
+
+function resetSmoke(p, first=false) {
+  p.position.set(
+    0.50 + (Math.random() - 0.5) * 0.08,
+    first ? 2.15 + Math.random() * 1.6 : 2.16,
+    0.20 + (Math.random() - 0.5) * 0.05
+  );
+  const s = 0.16 + Math.random() * 0.14;
+  p.scale.set(s, s, 1);
+  p.material.opacity = 0.28 + Math.random() * 0.12;
+  p.userData.seed = Math.random() * Math.PI * 2;
+}
+
+for (let i = 0; i < smokeCount; i++) {
+  const mat = new THREE.SpriteMaterial({
+    map: texSmoke,
+    transparent: true,
+    opacity: 0.35,
+    depthWrite: false
+  });
+  const sp = new THREE.Sprite(mat);
+  smokeGroup.add(sp);
+  smokeParticles.push(sp);
+  resetSmoke(sp, true);
+}
+
+function updateSmoke(t) {
+  for (const p of smokeParticles) {
+    p.position.y += 0.010;
+    p.position.x += Math.sin(t * 1.6 + p.userData.seed) * 0.0018;
+    p.position.z += Math.cos(t * 1.2 + p.userData.seed) * 0.0012;
+    p.scale.x += 0.0010;
+    p.scale.y += 0.0010;
+    p.material.opacity -= 0.0014;
+
+    if (p.position.y > 3.7 || p.material.opacity <= 0.02) {
+      resetSmoke(p, false);
+    }
+  }
+}
+
+/* ==========
+   船（家の後ろ）
 ========== */
 const textureLoader = new THREE.TextureLoader();
-const shipTexture = textureLoader.load("ship.png");
 
-const shipGeometry = new THREE.PlaneGeometry(3.0, 2.2);
-const shipMaterial = new THREE.MeshBasicMaterial({
-  map: shipTexture,
-  transparent: true,
-  side: THREE.DoubleSide,
-  depthWrite: false
+function makeShip(filename, x, y, z, scaleX, scaleY, dir, speed) {
+  const tex = textureLoader.load(filename);
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(scaleX, scaleY),
+    new THREE.MeshBasicMaterial({
+      map: tex,
+      transparent: true,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    })
+  );
+  mesh.position.set(x, y, z);
+  mesh.userData = { dir, speed, startZ: z };
+  return mesh;
+}
+
+/* 家の後ろ = z を少し奥へ */
+const ships = [
+  makeShip("ship1.png",  6.2, -3.02, -0.95, 1.55, 1.10, -1, 0.018),
+  makeShip("ship2.png",  9.2, -3.10, -1.15, 1.35, 0.96, -1, 0.013),
+  makeShip("ship3.png", -6.4, -2.94, -0.85, 1.45, 1.02,  1, 0.016),
+  makeShip("ship4.png", -9.0, -3.08, -1.25, 1.25, 0.90,  1, 0.012)
+];
+
+ships.forEach(s => {
+  s.renderOrder = 5;
+  world.add(s);
 });
 
-const ship = new THREE.Mesh(shipGeometry, shipMaterial);
-ship.position.set(5.8, -2.48, 2.55);
-ship.scale.set(1.18, 1.18, 1);
-ship.renderOrder = 50;
+function updateShips(t) {
+  ships.forEach((ship, i) => {
+    ship.position.x += ship.userData.dir * ship.userData.speed;
+    ship.position.y += Math.sin(t * (1.4 + i * 0.15) + i) * 0.01;
+    ship.position.z = ship.userData.startZ;
 
-// 横向き固定
-ship.rotation.y = 0;
-ship.rotation.z = 0;
-
-world.add(ship);
-
-function updateShip() {
-  ship.position.x -= 0.018;
-
-  if (ship.position.x < -5.8) {
-    ship.position.x = 5.8;
-  }
-
-  // わずかな上下だけ
-  ship.position.y = -2.48 + Math.sin(performance.now() * 0.0018) * 0.03;
-  ship.position.z = 2.55;
-  ship.rotation.y = 0;
-  ship.rotation.z = 0;
+    if (ship.userData.dir < 0 && ship.position.x < -10.2) {
+      ship.position.x = 10.2;
+    }
+    if (ship.userData.dir > 0 && ship.position.x > 10.2) {
+      ship.position.x = -10.2;
+    }
+  });
 }
 
 /* ==========
@@ -682,8 +660,9 @@ function animate() {
 
   const t = clock.getElapsedTime();
 
-  updateParticles(t);
-  updateShip();
+  updateSeasonParticles(t);
+  updateSmoke(t);
+  updateShips(t);
 
   waterPlane.material.opacity = 0.08 + Math.sin(t * 1.5) * 0.015;
   waterGlow.material.opacity = 0.04 + Math.sin(t * 2.2) * 0.012;
@@ -697,7 +676,6 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-setSeason("spring");
 animate();
 
 window.addEventListener("resize", () => {
