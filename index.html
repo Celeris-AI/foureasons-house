@@ -170,7 +170,9 @@ loader.load("sea_bg.png", (texture) => {
     new THREE.PlaneGeometry(1, 1),
     bgMaterial
   );
-  bgPlane.position.set(0, 1.2, -24);
+
+  /* 画面の真正面・中央に固定 */
+  bgPlane.position.set(0, 0, -24);
   bgGroup.add(bgPlane);
 
   fitBackgroundToView(texture);
@@ -194,12 +196,13 @@ function fitBackgroundToView(texture) {
 
   let planeWidth, planeHeight;
 
+  /* CSS の background-size: cover と同じ考え方 */
   if (viewAspect > imageAspect) {
     planeWidth = viewWidth;
-    planeHeight = planeWidth / imageAspect;
+    planeHeight = viewWidth / imageAspect;
   } else {
     planeHeight = viewHeight;
-    planeWidth = planeHeight * imageAspect;
+    planeWidth = viewHeight * imageAspect;
   }
 
   bgPlane.scale.set(planeWidth, planeHeight, 1);
