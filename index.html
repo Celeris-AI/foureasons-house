@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Ocean Coral - Auto Record with Music</title>
+<title>Ocean Coral - Auto Record Full Background</title>
 
 <style>
   html, body {
@@ -39,7 +39,7 @@
     position: fixed;
     inset: 0;
     z-index: 100;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     background:
@@ -50,12 +50,12 @@
     cursor: pointer;
   }
 
-  #startOverlay.hidden {
-    display: none;
+  #startOverlay.show {
+    display: flex;
   }
 
   #startCard {
-    max-width: 520px;
+    max-width: 560px;
     padding: 22px 26px;
     border-radius: 24px;
     background: rgba(255,255,255,0.10);
@@ -88,12 +88,13 @@
 
 <div id="status">読み込み中…</div>
 
-<div id="startOverlay" class="hidden">
+<div id="startOverlay">
   <div id="startCard">
     <h1>🎵 クリックで自動開始</h1>
     <p>
-      ブラウザの自動再生制限により、最初の1回だけクリックが必要な場合があります。<br>
-      クリック後は、音楽＋映像の録画が自動で始まり、曲の終了で自動保存されます。
+      ブラウザの制限で完全自動再生できない場合があります。<br>
+      そのときはここを1回クリックすると、音楽＋録画が自動で始まり、
+      曲の終了で自動保存されます。
     </p>
   </div>
 </div>
@@ -153,40 +154,44 @@ fillLight.position.set(-8, 5, -6);
 scene.add(fillLight);
 
 /* ==========
-   背景（録画に入るよう Three.js 内へ）
+   背景
+   sea_bg.png を画面全体に cover 表示
 ========== */
 const bgGroup = new THREE.Group();
 scene.add(bgGroup);
 
-const seaBgTexture = loader.load("sea_bg.png");
-seaBgTexture.colorSpace = THREE.SRGBColorSpace;
+let bgPlane = null;
 
-const seaBgTexture = loader.load("sea_bg.png");
-seaBgTexture.colorSpace = THREE.SRGBColorSpace;
+loader.load("sea_bg.png", (texture) => {
+  texture.colorSpace = THREE.SRGBColorSpace;
 
-const bgMaterial = new THREE.MeshBasicMaterial({
-  map: seaBgTexture,
-  depthWrite: false
+  const bgMaterial = new THREE.MeshBasicMaterial({
+    map: texture,
+    depthWrite: false
+  });
+
+  bgPlane = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    bgMaterial
+  );
+  bgPlane.position.set(0, 1.2, -24);
+  bgGroup.add(bgPlane);
+
+  fitBackgroundToView(texture);
+}, undefined, (err) => {
+  console.error("sea_bg.png の読み込みに失敗:", err);
 });
 
-const bgPlane = new THREE.Mesh(
-  new THREE.PlaneGeometry(1, 1),
-  bgMaterial
-);
-bgPlane.position.set(0, 1.2, -24);
-bgGroup.add(bgPlane);
+function fitBackgroundToView(texture) {
+  if (!bgPlane || !texture || !texture.image) return;
 
-function fitBackgroundToView() {
   const distance = Math.abs(camera.position.z - bgPlane.position.z);
   const vFov = THREE.MathUtils.degToRad(camera.fov);
 
   const viewHeight = 2 * Math.tan(vFov / 2) * distance;
   const viewWidth = viewHeight * camera.aspect;
 
-  const imageAspect = seaBgTexture.image
-    ? seaBgTexture.image.width / seaBgTexture.image.height
-    : 16 / 9;
-
+  const imageAspect = texture.image.width / texture.image.height;
   const viewAspect = viewWidth / viewHeight;
 
   let planeWidth, planeHeight;
@@ -202,13 +207,7 @@ function fitBackgroundToView() {
   bgPlane.scale.set(planeWidth, planeHeight, 1);
 }
 
-seaBgTexture.onUpdate = () => {
-  fitBackgroundToView();
-};
-
-seaBgTexture.image && fitBackgroundToView();
-
-/* 海面の前景トーン */
+/* 海面前景トーン */
 const frontOceanPlane = new THREE.Mesh(
   new THREE.PlaneGeometry(40, 12),
   new THREE.MeshBasicMaterial({
@@ -221,7 +220,7 @@ const frontOceanPlane = new THREE.Mesh(
 frontOceanPlane.position.set(0, -4.4, -8);
 scene.add(frontOceanPlane);
 
-/* きらめき用テクスチャ */
+/* 水面きらめきテクスチャ */
 function makeShimmerTexture() {
   const canvas = document.createElement("canvas");
   canvas.width = 512;
@@ -326,7 +325,7 @@ waterGlow.position.set(0, -3.52, 0);
 world.add(waterGlow);
 
 /* ==========
-   テクスチャ
+   パーティクル用テクスチャ
 ========== */
 function makePetalTexture() {
   const canvas = document.createElement("canvas");
@@ -672,6 +671,7 @@ let recordedChunks = [];
 let isRecording = false;
 let audioCtx = null;
 let started = false;
+let audioSourceNode = null;
 let autoStopTimer = null;
 
 async function beginAutoRecording() {
@@ -695,9 +695,13 @@ async function beginAutoRecording() {
     const canvasStream = renderer.domElement.captureStream(60);
 
     const destination = audioCtx.createMediaStreamDestination();
-    const source = audioCtx.createMediaElementSource(bgm);
-    source.connect(destination);
-    source.connect(audioCtx.destination);
+
+    if (!audioSourceNode) {
+      audioSourceNode = audioCtx.createMediaElementSource(bgm);
+    }
+
+    audioSourceNode.connect(destination);
+    audioSourceNode.connect(audioCtx.destination);
 
     const mixedStream = new MediaStream();
     canvasStream.getVideoTracks().forEach(track => mixedStream.addTrack(track));
@@ -761,7 +765,7 @@ async function beginAutoRecording() {
   } catch (err) {
     console.error(err);
     started = false;
-    startOverlay.classList.remove("hidden");
+    startOverlay.classList.add("show");
     statusEl.textContent = "クリックで開始してください";
   }
 }
@@ -786,11 +790,10 @@ bgm.addEventListener("ended", () => {
 });
 
 startOverlay.addEventListener("click", async () => {
-  startOverlay.classList.add("hidden");
+  startOverlay.classList.remove("show");
   await beginAutoRecording();
 });
 
-/* ページ読み込み後に自動開始を試す */
 window.addEventListener("load", async () => {
   try {
     await beginAutoRecording();
@@ -837,6 +840,10 @@ window.addEventListener("resize", () => {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  if (bgPlane && bgPlane.material.map) {
+    fitBackgroundToView(bgPlane.material.map);
+  }
 });
 </script>
 </body>
