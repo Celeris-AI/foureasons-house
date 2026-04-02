@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Ocean Coral - Front Coral Layout</title>
+<title>Ocean Coral - Record with Music</title>
 
 <style>
   html, body {
@@ -12,6 +12,7 @@
     height: 100%;
     overflow: hidden;
     background: #000;
+    font-family: "Yu Gothic", "Hiragino Sans", sans-serif;
   }
 
   #bg-back {
@@ -93,6 +94,47 @@
     50%  { transform: translateY(8px) scaleY(1.02); }
     100% { transform: translateY(0) scaleY(1); }
   }
+
+  #ui {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 20;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  button {
+    border: none;
+    border-radius: 999px;
+    padding: 10px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    background: rgba(255,255,255,0.88);
+    color: #06334a;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.24);
+  }
+
+  button:hover {
+    transform: translateY(-1px);
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: default;
+    transform: none;
+  }
+
+  #status {
+    color: #fff;
+    font-size: 13px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.28);
+    padding: 8px 12px;
+    border-radius: 999px;
+  }
 </style>
 
 <script type="importmap">
@@ -110,6 +152,14 @@
 <div id="ocean-front"></div>
 <div id="water-shimmer"></div>
 
+<div id="ui">
+  <button id="startBtn">▶ 再生＋録画開始</button>
+  <button id="stopBtn" disabled>■ 停止して保存</button>
+  <div id="status">待機中…</div>
+</div>
+
+<audio id="bgm" src="music.mp3" preload="auto" crossorigin="anonymous"></audio>
+
 <script type="module">
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -126,7 +176,8 @@ camera.position.set(0, 2.7, 14);
 
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
-  alpha: true
+  alpha: true,
+  preserveDrawingBuffer: false
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -340,7 +391,7 @@ const texSnow   = makeSnowTexture();
 const texSmoke  = makeSmokeTexture();
 
 /* ==========
-   均等配置：桜・光・珊瑚・もみじ・雪
+   均等配置
 ========== */
 const zoneConfigs = [
   { texture: texSakura, xMin: -15.80, xMax: -13.20, yMin: -3.30, yMax: 1.8, opacity: 0.95, scaleMin: 0.22, scaleMax: 0.34, speed: 0.010, kind: "sakura" },
@@ -419,7 +470,7 @@ function updateSeasonParticles(t) {
 }
 
 /* ==========
-   けむり（珊瑚から）
+   けむり
 ========== */
 const smokeGroup = new THREE.Group();
 coralGroup.add(smokeGroup);
@@ -470,7 +521,7 @@ function updateSmoke(t) {
 }
 
 /* ==========
-   船（画面外→画面外）
+   船
 ========== */
 function makeShip(filename, x, y, z, width, height, dir, speed) {
   const tex = textureLoader.load(filename);
@@ -491,7 +542,6 @@ function makeShip(filename, x, y, z, width, height, dir, speed) {
 const RIGHT_OUT = 30;
 const LEFT_OUT  = -30;
 
-/* 船をほんの少し拡大 */
 const ships = [
   makeShip("ship1.png", RIGHT_OUT + 2.0, -2.98, -1.00, 2.55, 1.74, -1, 0.026),
   makeShip("ship2.png", RIGHT_OUT + 8.0, -3.08, -1.18, 2.23, 1.54, -1, 0.020),
@@ -553,6 +603,136 @@ for (let i = 0; i < 16; i++) {
 
   sparkleGroup.add(s);
 }
+
+/* ==========
+   録画
+========== */
+const bgm = document.getElementById("bgm");
+const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
+const statusEl = document.getElementById("status");
+
+let mediaRecorder = null;
+let recordedChunks = [];
+let isRecording = false;
+let audioCtx = null;
+let animationStartedAt = null;
+
+async function startRecording() {
+  if (isRecording) return;
+
+  try {
+    statusEl.textContent = "録画準備中…";
+
+    if (!audioCtx) {
+      audioCtx = new AudioContext();
+    }
+    if (audioCtx.state === "suspended") {
+      await audioCtx.resume();
+    }
+
+    bgm.currentTime = 0;
+    bgm.loop = false;
+    bgm.volume = 1.0;
+
+    const canvasStream = renderer.domElement.captureStream(60);
+
+    const destination = audioCtx.createMediaStreamDestination();
+    const source = audioCtx.createMediaElementSource(bgm);
+    source.connect(destination);
+    source.connect(audioCtx.destination);
+
+    const mixedStream = new MediaStream();
+
+    canvasStream.getVideoTracks().forEach(track => mixedStream.addTrack(track));
+    destination.stream.getAudioTracks().forEach(track => mixedStream.addTrack(track));
+
+    const mimeTypes = [
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm"
+    ];
+
+    let selectedMimeType = "";
+    for (const type of mimeTypes) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        selectedMimeType = type;
+        break;
+      }
+    }
+
+    mediaRecorder = new MediaRecorder(
+      mixedStream,
+      selectedMimeType ? { mimeType: selectedMimeType, videoBitsPerSecond: 12000000 } : { videoBitsPerSecond: 12000000 }
+    );
+
+    recordedChunks = [];
+
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data && event.data.size > 0) {
+        recordedChunks.push(event.data);
+      }
+    };
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordedChunks, { type: "video/webm" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "ocean_coral_music_recording.webm";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      setTimeout(() => URL.revokeObjectURL(url), 3000);
+
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      statusEl.textContent = "保存しました ✨";
+      isRecording = false;
+    };
+
+    mediaRecorder.start(200);
+    await bgm.play();
+
+    animationStartedAt = performance.now();
+
+    isRecording = true;
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    statusEl.textContent = "録画中… 3:30の曲に合わせて保存されます 🎶";
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = "録画開始に失敗しました";
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    isRecording = false;
+  }
+}
+
+function stopRecording() {
+  if (!isRecording) return;
+
+  try {
+    bgm.pause();
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+    }
+    statusEl.textContent = "録画停止中…";
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = "停止時にエラーが発生しました";
+  }
+}
+
+bgm.addEventListener("ended", () => {
+  if (isRecording) {
+    stopRecording();
+  }
+});
+
+startBtn.addEventListener("click", startRecording);
+stopBtn.addEventListener("click", stopRecording);
 
 /* ==========
    アニメーション
