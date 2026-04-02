@@ -492,36 +492,6 @@ const crystalAura = new THREE.Mesh(
 );
 crystalGroup.add(crystalAura);
 
-/* ==========
-   光の柱
-========== */
-const beam = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.32, 0.48, 8.5, 48, 1, true),
-  new THREE.MeshBasicMaterial({
-    color: 0x8ecfff,
-    transparent: true,
-    opacity: 0.16,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending
-  })
-);
-beam.position.set(0, 0.2, 0);
-world.add(beam);
-
-const beamCore = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.12, 0.14, 8.8, 32, 1, true),
-  new THREE.MeshBasicMaterial({
-    color: 0xffffff,
-    transparent: true,
-    opacity: 0.22,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending
-  })
-);
-beamCore.position.set(0, 0.2, 0);
-world.add(beamCore);
 
 /* ==========
    光リング
@@ -873,11 +843,6 @@ function animate() {
   crystalInner.rotation.x += 0.01;
 
   crystalAura.scale.setScalar(1 + Math.sin(t * 2.0) * 0.05);
-
-  beam.material.opacity = 0.11 + Math.sin(t * 2.1) * 0.05;
-  beamCore.material.opacity = 0.18 + Math.sin(t * 2.5 + 0.5) * 0.06;
-  beam.scale.x = 1 + Math.sin(t * 1.4) * 0.05;
-  beam.scale.z = 1 + Math.cos(t * 1.2) * 0.05;
 
   ringGroup.children.forEach((ring, i) => {
     ring.rotation.z = t * (0.35 + i * 0.08) * (i % 2 === 0 ? 1 : -1);
