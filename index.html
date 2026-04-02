@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Ocean House - Ships and Seasonal Layout Large Ships</title>
+<title>Ocean House - Even Seasonal Layout</title>
 
 <style>
   html, body {
@@ -420,10 +420,10 @@ function makeSmokeTexture() {
   const ctx = canvas.getContext("2d");
 
   const grad = ctx.createRadialGradient(64, 64, 8, 64, 64, 50);
-  grad.addColorStop(0, "rgba(60,60,60,0.82)");
-  grad.addColorStop(0.45, "rgba(45,45,45,0.58)");
-  grad.addColorStop(0.80, "rgba(35,35,35,0.26)");
-  grad.addColorStop(1, "rgba(20,20,20,0)");
+  grad.addColorStop(0, "rgba(255,255,255,0.72)");
+  grad.addColorStop(0.45, "rgba(240,240,245,0.46)");
+  grad.addColorStop(0.80, "rgba(220,225,235,0.18)");
+  grad.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = grad;
   ctx.beginPath();
   ctx.arc(64, 64, 50, 0, Math.PI * 2);
@@ -439,13 +439,14 @@ const texSnow   = makeSnowTexture();
 const texSmoke  = makeSmokeTexture();
 
 /* ==========
-   桜・光・もみじ・雪を家から離す
+   均等配置：桜・光・家・もみじ・雪
 ========== */
+/* 画面の左から右へ、かなり均等になるように広げる */
 const zoneConfigs = [
-  { texture: texSakura, xMin: -4.70, xMax: -3.10, yMin: -3.30, yMax: 1.8, opacity: 0.95, scaleMin: 0.22, scaleMax: 0.34, speed: 0.010, kind: "sakura" },
-  { texture: texLight,  xMin: -2.65, xMax: -1.55, yMin: -3.20, yMax: 2.1, opacity: 0.88, scaleMin: 0.14, scaleMax: 0.22, speed: 0.013, kind: "light"  },
-  { texture: texLeaf,   xMin:  1.55, xMax:  2.65, yMin: -3.30, yMax: 1.8, opacity: 0.93, scaleMin: 0.22, scaleMax: 0.34, speed: 0.010, kind: "leaf"   },
-  { texture: texSnow,   xMin:  3.10, xMax:  4.70, yMin: -3.25, yMax: 1.9, opacity: 0.92, scaleMin: 0.16, scaleMax: 0.25, speed: 0.008, kind: "snow"   }
+  { texture: texSakura, xMin: -5.80, xMax: -4.20, yMin: -3.30, yMax: 1.8, opacity: 0.95, scaleMin: 0.22, scaleMax: 0.34, speed: 0.010, kind: "sakura" },
+  { texture: texLight,  xMin: -2.90, xMax: -1.30, yMin: -3.20, yMax: 2.1, opacity: 0.88, scaleMin: 0.14, scaleMax: 0.22, speed: 0.013, kind: "light"  },
+  { texture: texLeaf,   xMin:  1.30, xMax:  2.90, yMin: -3.30, yMax: 1.8, opacity: 0.93, scaleMin: 0.22, scaleMax: 0.34, speed: 0.010, kind: "leaf"   },
+  { texture: texSnow,   xMin:  4.20, xMax:  5.80, yMin: -3.25, yMax: 1.9, opacity: 0.92, scaleMin: 0.16, scaleMax: 0.25, speed: 0.008, kind: "snow"   }
 ];
 
 const seasonalGroup = new THREE.Group();
@@ -453,9 +454,8 @@ world.add(seasonalGroup);
 
 const seasonalParticles = [];
 
-function resetSeasonParticle(p, zone, first=false) {
+function resetSeasonParticle(p, zone, first = false) {
   p.userData.zone = zone;
-
   p.position.x = zone.xMin + Math.random() * (zone.xMax - zone.xMin);
   p.position.z = (Math.random() - 0.5) * 1.2;
   p.position.y = first
@@ -469,7 +469,6 @@ function resetSeasonParticle(p, zone, first=false) {
 
   const s = zone.scaleMin + Math.random() * (zone.scaleMax - zone.scaleMin);
   p.scale.set(s, s, 1);
-
   p.userData.seed = Math.random() * Math.PI * 2;
 }
 
@@ -520,15 +519,15 @@ function updateSeasonParticles(t) {
 }
 
 /* ==========
-   けむり（黒く強調）
+   けむり（白）
 ========== */
 const smokeGroup = new THREE.Group();
 houseGroup.add(smokeGroup);
 
 const smokeParticles = [];
-const smokeCount = 30;
+const smokeCount = 28;
 
-function resetSmoke(p, first=false) {
+function resetSmoke(p, first = false) {
   p.position.set(
     0.50 + (Math.random() - 0.5) * 0.07,
     first ? 2.16 + Math.random() * 1.8 : 2.16,
@@ -536,7 +535,7 @@ function resetSmoke(p, first=false) {
   );
   const s = 0.18 + Math.random() * 0.16;
   p.scale.set(s, s, 1);
-  p.material.opacity = 0.48 + Math.random() * 0.20;
+  p.material.opacity = 0.34 + Math.random() * 0.14;
   p.userData.seed = Math.random() * Math.PI * 2;
 }
 
@@ -544,7 +543,7 @@ for (let i = 0; i < smokeCount; i++) {
   const mat = new THREE.SpriteMaterial({
     map: texSmoke,
     transparent: true,
-    opacity: 0.58,
+    opacity: 0.42,
     depthWrite: false
   });
   const sp = new THREE.Sprite(mat);
@@ -556,20 +555,20 @@ for (let i = 0; i < smokeCount; i++) {
 function updateSmoke(t) {
   for (const p of smokeParticles) {
     p.position.y += 0.012;
-    p.position.x += Math.sin(t * 1.5 + p.userData.seed) * 0.0026;
-    p.position.z += Math.cos(t * 1.2 + p.userData.seed) * 0.0016;
-    p.scale.x += 0.0016;
-    p.scale.y += 0.0016;
-    p.material.opacity -= 0.0019;
+    p.position.x += Math.sin(t * 1.5 + p.userData.seed) * 0.0022;
+    p.position.z += Math.cos(t * 1.2 + p.userData.seed) * 0.0014;
+    p.scale.x += 0.0015;
+    p.scale.y += 0.0015;
+    p.material.opacity -= 0.0015;
 
-    if (p.position.y > 4.0 || p.material.opacity <= 0.03) {
+    if (p.position.y > 4.0 || p.material.opacity <= 0.02) {
       resetSmoke(p, false);
     }
   }
 }
 
 /* ==========
-   船（大きく・端で消えてループ）
+   船（画面外→画面外）
 ========== */
 const textureLoader = new THREE.TextureLoader();
 
@@ -589,12 +588,15 @@ function makeShip(filename, x, y, z, width, height, dir, speed) {
   return mesh;
 }
 
-/* 家の後ろに配置しつつ大型化 */
+/* しっかり画面外から出て、画面外へ消える値 */
+const RIGHT_OUT = 16.5;
+const LEFT_OUT  = -16.5;
+
 const ships = [
-  makeShip("ship1.png", 12.0, -2.98, -1.00, 2.35, 1.60, -1, 0.026),
-  makeShip("ship2.png", 17.5, -3.08, -1.18, 2.05, 1.42, -1, 0.020),
-  makeShip("ship3.png",-12.0, -2.94, -0.90, 2.25, 1.52,  1, 0.024),
-  makeShip("ship4.png",-18.0, -3.10, -1.26, 1.95, 1.34,  1, 0.018)
+  makeShip("ship1.png", RIGHT_OUT + 2.0, -2.98, -1.00, 2.35, 1.60, -1, 0.026),
+  makeShip("ship2.png", RIGHT_OUT + 8.0, -3.08, -1.18, 2.05, 1.42, -1, 0.020),
+  makeShip("ship3.png", LEFT_OUT  - 2.0, -2.94, -0.90, 2.25, 1.52,  1, 0.024),
+  makeShip("ship4.png", LEFT_OUT  - 8.0, -3.10, -1.26, 1.95, 1.34,  1, 0.018)
 ];
 
 ships.forEach(s => {
@@ -608,14 +610,12 @@ function updateShips(t) {
     ship.position.y = ship.userData.baseY + Math.sin(t * (1.3 + i * 0.12) + i) * 0.010;
     ship.position.z = ship.userData.startZ;
 
-    /* 右→左 */
-    if (ship.userData.dir < 0 && ship.position.x < -12.5) {
-      ship.position.x = 12.5;
+    if (ship.userData.dir < 0 && ship.position.x < LEFT_OUT - 2.5) {
+      ship.position.x = RIGHT_OUT + 2.5;
     }
 
-    /* 左→右 */
-    if (ship.userData.dir > 0 && ship.position.x > 12.5) {
-      ship.position.x = -12.5;
+    if (ship.userData.dir > 0 && ship.position.x > RIGHT_OUT + 2.5) {
+      ship.position.x = LEFT_OUT - 2.5;
     }
   });
 }
