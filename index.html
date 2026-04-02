@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Ocean Coral - Even Seasonal Layout</title>
+<title>Ocean Coral - Front Coral Layout</title>
 
 <style>
   html, body {
@@ -160,34 +160,10 @@ world.position.set(0, -0.95, -6.25);
 scene.add(world);
 
 /* ==========
-   土台
-========== */
-const base = new THREE.Mesh(
-  new THREE.CylinderGeometry(2.45, 2.9, 0.76, 64),
-  new THREE.MeshStandardMaterial({
-    color: 0x8c6d4a,
-    roughness: 0.96
-  })
-);
-base.position.set(0, -4.18, 0);
-world.add(base);
-
-const innerGround = new THREE.Mesh(
-  new THREE.CircleGeometry(2.38, 64),
-  new THREE.MeshStandardMaterial({
-    color: 0x7fb36a,
-    roughness: 1
-  })
-);
-innerGround.rotation.x = -Math.PI / 2;
-innerGround.position.set(0, -3.78, 0);
-world.add(innerGround);
-
-/* ==========
-   珊瑚
+   サンゴ礁
 ========== */
 const coralGroup = new THREE.Group();
-coralGroup.position.set(0, -3.42, 0);
+coralGroup.position.set(0, -3.42, 0.70);
 world.add(coralGroup);
 
 const textureLoader = new THREE.TextureLoader();
@@ -196,7 +172,7 @@ const coralTexture = textureLoader.load("sango.png");
 coralTexture.colorSpace = THREE.SRGBColorSpace;
 
 const coral = new THREE.Mesh(
-  new THREE.PlaneGeometry(4.8, 3.7),
+  new THREE.PlaneGeometry(5.0, 3.9),
   new THREE.MeshBasicMaterial({
     map: coralTexture,
     transparent: true,
@@ -204,22 +180,9 @@ const coral = new THREE.Mesh(
     depthWrite: false
   })
 );
-coral.position.set(0, 1.15, 0.05);
+coral.position.set(0, 1.12, 0);
+coral.renderOrder = 20;
 coralGroup.add(coral);
-
-/* 珊瑚の足元に少し立体感 */
-const coralShadow = new THREE.Mesh(
-  new THREE.CircleGeometry(1.45, 48),
-  new THREE.MeshBasicMaterial({
-    color: 0x2a140d,
-    transparent: true,
-    opacity: 0.22,
-    depthWrite: false
-  })
-);
-coralShadow.rotation.x = -Math.PI / 2;
-coralShadow.position.set(0, 0.02, 0);
-coralGroup.add(coralShadow);
 
 /* ==========
    水面
@@ -465,11 +428,10 @@ const smokeParticles = [];
 const smokeCount = 28;
 
 function resetSmoke(p, first = false) {
-  /* 珊瑚の中心やや下から出る感じ */
   p.position.set(
     (Math.random() - 0.5) * 0.34,
     first ? 0.72 + Math.random() * 1.1 : 0.72,
-    0.10 + (Math.random() - 0.5) * 0.12
+    0.12 + (Math.random() - 0.5) * 0.12
   );
 
   const s = 0.18 + Math.random() * 0.16;
@@ -486,6 +448,7 @@ for (let i = 0; i < smokeCount; i++) {
     depthWrite: false
   });
   const sp = new THREE.Sprite(mat);
+  sp.renderOrder = 21;
   smokeGroup.add(sp);
   smokeParticles.push(sp);
   resetSmoke(sp, true);
@@ -528,11 +491,12 @@ function makeShip(filename, x, y, z, width, height, dir, speed) {
 const RIGHT_OUT = 30;
 const LEFT_OUT  = -30;
 
+/* 船をほんの少し拡大 */
 const ships = [
-  makeShip("ship1.png", RIGHT_OUT + 2.0, -2.98, -1.00, 2.35, 1.60, -1, 0.026),
-  makeShip("ship2.png", RIGHT_OUT + 8.0, -3.08, -1.18, 2.05, 1.42, -1, 0.020),
-  makeShip("ship3.png", LEFT_OUT  - 2.0, -2.94, -0.90, 2.25, 1.52,  1, 0.024),
-  makeShip("ship4.png", LEFT_OUT  - 8.0, -3.10, -1.26, 1.95, 1.34,  1, 0.018)
+  makeShip("ship1.png", RIGHT_OUT + 2.0, -2.98, -1.00, 2.55, 1.74, -1, 0.026),
+  makeShip("ship2.png", RIGHT_OUT + 8.0, -3.08, -1.18, 2.23, 1.54, -1, 0.020),
+  makeShip("ship3.png", LEFT_OUT  - 2.0, -2.94, -0.90, 2.43, 1.64,  1, 0.024),
+  makeShip("ship4.png", LEFT_OUT  - 8.0, -3.10, -1.26, 2.12, 1.46,  1, 0.018)
 ];
 
 ships.forEach(s => {
