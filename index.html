@@ -152,61 +152,16 @@ scene.add(fillLight);
 
 /* ==========
    背景
+   画面全体にまっすぐ表示
 ========== */
-const bgGroup = new THREE.Group();
-scene.add(bgGroup);
-
-let bgPlane = null;
-
 loader.load("sea_bg.png", (texture) => {
   texture.colorSpace = THREE.SRGBColorSpace;
-
-  const bgMaterial = new THREE.MeshBasicMaterial({
-    map: texture,
-    depthWrite: false
-  });
-
-  bgPlane = new THREE.Mesh(
-    new THREE.PlaneGeometry(1, 1),
-    bgMaterial
-  );
-
-  /* 画面の真正面・中央に固定 */
-  bgPlane.position.set(0, 0, -24);
-  bgGroup.add(bgPlane);
-
-  fitBackgroundToView(texture);
+  scene.background = texture;
   statusEl.textContent = "準備OK：中央をクリックで録画開始";
 }, undefined, (err) => {
   console.error("sea_bg.png の読み込み失敗", err);
   statusEl.textContent = "sea_bg.png の読み込みに失敗しました";
 });
-
-function fitBackgroundToView(texture) {
-  if (!bgPlane || !texture || !texture.image) return;
-
-  const distance = Math.abs(camera.position.z - bgPlane.position.z);
-  const vFov = THREE.MathUtils.degToRad(camera.fov);
-
-  const viewHeight = 2 * Math.tan(vFov / 2) * distance;
-  const viewWidth = viewHeight * camera.aspect;
-
-  const imageAspect = texture.image.width / texture.image.height;
-  const viewAspect = viewWidth / viewHeight;
-
-  let planeWidth, planeHeight;
-
-  /* CSS の background-size: cover と同じ考え方 */
-  if (viewAspect > imageAspect) {
-    planeWidth = viewWidth;
-    planeHeight = viewWidth / imageAspect;
-  } else {
-    planeHeight = viewHeight;
-    planeWidth = viewHeight * imageAspect;
-  }
-
-  bgPlane.scale.set(planeWidth, planeHeight, 1);
-}
 
 /* 海前景 */
 const frontOceanPlane = new THREE.Mesh(
@@ -809,10 +764,6 @@ window.addEventListener("resize", () => {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-  if (bgPlane && bgPlane.material.map) {
-    fitBackgroundToView(bgPlane.material.map);
-  }
 });
 </script>
 </body>
