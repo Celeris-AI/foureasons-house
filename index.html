@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Ocean Coral - Stable Record Version</title>
+<title>Magic Circle Crystal World - Auto Record Version</title>
 
 <style>
   html, body {
@@ -42,7 +42,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(circle at center, rgba(10,30,50,0.25), rgba(0,0,0,0.62));
+    background:
+      radial-gradient(circle at center, rgba(80,120,180,0.15), rgba(0,0,0,0.72));
     color: white;
     text-align: center;
     padding: 24px;
@@ -54,11 +55,11 @@
   }
 
   #startCard {
-    max-width: 560px;
-    padding: 22px 26px;
+    max-width: 620px;
+    padding: 24px 28px;
     border-radius: 24px;
     background: rgba(255,255,255,0.10);
-    box-shadow: 0 10px 36px rgba(0,0,0,0.30);
+    box-shadow: 0 10px 36px rgba(0,0,0,0.35);
     backdrop-filter: blur(8px);
   }
 
@@ -85,11 +86,11 @@
 </head>
 <body>
 
-<div id="status">背景と映像を読み込み中…</div>
+<div id="status">魔導世界を読み込み中…</div>
 
 <div id="startOverlay">
   <div id="startCard">
-    <h1>🪸🎵 クリックで開始</h1>
+    <h1>🔮💎 クリックで開始</h1>
     <p>
       背景が見えていれば準備OKです。<br>
       クリックすると、音楽つき録画が始まり、3分30秒後に自動保存されます。
@@ -133,174 +134,219 @@ controls.enableDamping = true;
 controls.enableRotate = false;
 controls.enableZoom = false;
 controls.enablePan = false;
-controls.target.set(0, -1.15, -6.2);
+controls.target.set(0, -0.8, -5.8);
 
 const loader = new THREE.TextureLoader();
 
 /* ==========
    ライト
 ========== */
-scene.add(new THREE.AmbientLight(0xffffff, 1.42));
+scene.add(new THREE.AmbientLight(0xffffff, 1.25));
 
-const dirLight = new THREE.DirectionalLight(0xffffff, 1.75);
-dirLight.position.set(8, 11, 9);
+const dirLight = new THREE.DirectionalLight(0xd9eeff, 1.8);
+dirLight.position.set(7, 10, 8);
 scene.add(dirLight);
 
-const fillLight = new THREE.DirectionalLight(0xdff4ff, 0.90);
-fillLight.position.set(-8, 5, -6);
+const fillLight = new THREE.DirectionalLight(0xa7cfff, 0.8);
+fillLight.position.set(-8, 4, -6);
 scene.add(fillLight);
+
+const pointLight = new THREE.PointLight(0x8fd3ff, 3.5, 30, 2);
+pointLight.position.set(0, -1.0, -6.2);
+scene.add(pointLight);
 
 /* ==========
    背景
-   画面全体にまっすぐ表示
 ========== */
 loader.load("sea_bg.png", (texture) => {
   texture.colorSpace = THREE.SRGBColorSpace;
   scene.background = texture;
   statusEl.textContent = "準備OK：中央をクリックで録画開始";
-}, undefined, (err) => {
-  console.error("sea_bg.png の読み込み失敗", err);
-  statusEl.textContent = "sea_bg.png の読み込みに失敗しました";
+}, undefined, () => {
+  scene.background = new THREE.Color(0x03060d);
+  statusEl.textContent = "背景画像なしで起動：中央をクリックで録画開始";
 });
 
-/* 海前景 */
-const frontOceanPlane = new THREE.Mesh(
-  new THREE.PlaneGeometry(40, 12),
+/* ==========
+   前景の霧と床光
+========== */
+const frontMist = new THREE.Mesh(
+  new THREE.PlaneGeometry(44, 14),
   new THREE.MeshBasicMaterial({
-    color: 0x4d95c8,
+    color: 0x6ab8ff,
     transparent: true,
-    opacity: 0.16,
+    opacity: 0.06,
     depthWrite: false
   })
 );
-frontOceanPlane.position.set(0, -4.4, -8);
-scene.add(frontOceanPlane);
+frontMist.position.set(0, -4.2, -8);
+scene.add(frontMist);
 
-function makeShimmerTexture() {
-  const canvas = document.createElement("canvas");
-  canvas.width = 512;
-  canvas.height = 512;
-  const ctx = canvas.getContext("2d");
-
-  const grad1 = ctx.createRadialGradient(120, 90, 10, 120, 90, 160);
-  grad1.addColorStop(0, "rgba(255,255,255,0.35)");
-  grad1.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = grad1;
-  ctx.fillRect(0, 0, 512, 512);
-
-  const grad2 = ctx.createRadialGradient(360, 120, 8, 360, 120, 130);
-  grad2.addColorStop(0, "rgba(255,255,255,0.18)");
-  grad2.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = grad2;
-  ctx.fillRect(0, 0, 512, 512);
-
-  for (let i = 0; i < 90; i++) {
-    const y = Math.random() * 512;
-    const h = 1 + Math.random() * 3;
-    const alpha = 0.02 + Math.random() * 0.05;
-    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-    ctx.fillRect(0, y, 512, h);
-  }
-
-  return new THREE.CanvasTexture(canvas);
-}
-
-const shimmerTexture = makeShimmerTexture();
-const shimmerPlane = new THREE.Mesh(
-  new THREE.PlaneGeometry(40, 10),
-  new THREE.MeshBasicMaterial({
-    map: shimmerTexture,
-    transparent: true,
-    opacity: 0.48,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending
-  })
-);
-shimmerPlane.position.set(0, -4.6, -7.4);
-scene.add(shimmerPlane);
-
-/* ==========
-   ワールド
-========== */
 const world = new THREE.Group();
-world.position.set(0, -0.95, -6.25);
+world.position.set(0, -0.9, -6.2);
 scene.add(world);
 
 /* ==========
-   サンゴ
+   テクスチャ作成
 ========== */
-const coralGroup = new THREE.Group();
-coralGroup.position.set(0, -3.42, 0.70);
-world.add(coralGroup);
-
-const coralTexture = loader.load("sango.png");
-coralTexture.colorSpace = THREE.SRGBColorSpace;
-
-const coral = new THREE.Mesh(
-  new THREE.PlaneGeometry(5.0, 3.9),
-  new THREE.MeshBasicMaterial({
-    map: coralTexture,
-    transparent: true,
-    side: THREE.DoubleSide,
-    depthWrite: false
-  })
-);
-coral.position.set(0, 1.12, 0);
-coral.renderOrder = 20;
-coralGroup.add(coral);
-
-/* 水面 */
-const waterPlane = new THREE.Mesh(
-  new THREE.CircleGeometry(2.7, 80),
-  new THREE.MeshBasicMaterial({
-    color: 0x9fdcff,
-    transparent: true,
-    opacity: 0.10,
-    depthWrite: false
-  })
-);
-waterPlane.rotation.x = -Math.PI / 2;
-waterPlane.position.set(0, -3.55, 0);
-world.add(waterPlane);
-
-const waterGlow = new THREE.Mesh(
-  new THREE.CircleGeometry(2.95, 80),
-  new THREE.MeshBasicMaterial({
-    color: 0xffffff,
-    transparent: true,
-    opacity: 0.05,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending
-  })
-);
-waterGlow.rotation.x = -Math.PI / 2;
-waterGlow.position.set(0, -3.52, 0);
-world.add(waterGlow);
-
-/* ==========
-   テクスチャ
-========== */
-function makePetalTexture() {
+function makeMagicCircleTexture(size = 1024, hue = "170,235,255") {
   const canvas = document.createElement("canvas");
-  canvas.width = 128;
-  canvas.height = 128;
+  canvas.width = size;
+  canvas.height = size;
   const ctx = canvas.getContext("2d");
 
-  ctx.translate(64, 64);
-  ctx.rotate(-0.35);
+  const cx = size / 2;
+  const cy = size / 2;
 
-  const grad = ctx.createRadialGradient(-8, -12, 4, 0, 0, 40);
-  grad.addColorStop(0, "rgba(255,240,248,1)");
-  grad.addColorStop(1, "rgba(255,160,205,0.98)");
-  ctx.fillStyle = grad;
+  ctx.clearRect(0, 0, size, size);
 
+  const bgGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 0.48);
+  bgGlow.addColorStop(0.0, `rgba(${hue},0.12)`);
+  bgGlow.addColorStop(0.35, `rgba(${hue},0.06)`);
+  bgGlow.addColorStop(1.0, "rgba(0,0,0,0)");
+  ctx.fillStyle = bgGlow;
   ctx.beginPath();
-  ctx.moveTo(0, -32);
-  ctx.bezierCurveTo(28, -22, 30, 10, 0, 34);
-  ctx.bezierCurveTo(-24, 10, -22, -22, 0, -32);
+  ctx.arc(cx, cy, size * 0.48, 0, Math.PI * 2);
   ctx.fill();
 
-  return new THREE.CanvasTexture(canvas);
+  ctx.strokeStyle = `rgba(${hue},0.95)`;
+  ctx.lineWidth = size * 0.004;
+  ctx.shadowColor = `rgba(${hue},0.9)`;
+  ctx.shadowBlur = size * 0.018;
+
+  function ring(r, alpha = 1, width = 1) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.lineWidth = size * 0.004 * width;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function polygon(r, sides, rotation = 0, alpha = 1) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    for (let i = 0; i < sides; i++) {
+      const a = rotation + (Math.PI * 2 * i) / sides;
+      const x = cx + Math.cos(a) * r;
+      const y = cy + Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function star(rOuter, rInner, points, rotation = 0, alpha = 1) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    for (let i = 0; i < points * 2; i++) {
+      const r = i % 2 === 0 ? rOuter : rInner;
+      const a = rotation + (Math.PI * i) / points;
+      const x = cx + Math.cos(a) * r;
+      const y = cy + Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function radialLines(r1, r2, count, rotation = 0, alpha = 1) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    for (let i = 0; i < count; i++) {
+      const a = rotation + (Math.PI * 2 * i) / count;
+      const x1 = cx + Math.cos(a) * r1;
+      const y1 = cy + Math.sin(a) * r1;
+      const x2 = cx + Math.cos(a) * r2;
+      const y2 = cy + Math.sin(a) * r2;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function runeDots(r, count, dotR, rotation = 0, alpha = 1) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = `rgba(${hue},0.98)`;
+    ctx.shadowColor = `rgba(${hue},1)`;
+    ctx.shadowBlur = size * 0.015;
+    for (let i = 0; i < count; i++) {
+      const a = rotation + (Math.PI * 2 * i) / count;
+      const x = cx + Math.cos(a) * r;
+      const y = cy + Math.sin(a) * r;
+      ctx.beginPath();
+      ctx.arc(x, y, dotR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function runeMarks(r, count, rotation = 0, alpha = 1) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.lineWidth = size * 0.003;
+    for (let i = 0; i < count; i++) {
+      const a = rotation + (Math.PI * 2 * i) / count;
+      const x = cx + Math.cos(a) * r;
+      const y = cy + Math.sin(a) * r;
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(a + Math.PI / 2);
+
+      ctx.beginPath();
+      ctx.moveTo(0, -size * 0.014);
+      ctx.lineTo(0, size * 0.014);
+      ctx.moveTo(-size * 0.008, 0);
+      ctx.lineTo(size * 0.008, 0);
+      ctx.moveTo(0, -size * 0.014);
+      ctx.lineTo(size * 0.007, -size * 0.022);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  ring(size * 0.44, 0.55, 1.0);
+  ring(size * 0.40, 0.85, 1.45);
+  ring(size * 0.34, 0.78, 1.0);
+  ring(size * 0.24, 0.95, 1.2);
+  ring(size * 0.10, 0.92, 1.0);
+
+  polygon(size * 0.365, 6, -Math.PI / 2, 0.55);
+  star(size * 0.30, size * 0.12, 8, -Math.PI / 2, 0.95);
+  polygon(size * 0.18, 3, -Math.PI / 2, 0.82);
+
+  radialLines(size * 0.245, size * 0.335, 16, 0, 0.45);
+  radialLines(size * 0.11, size * 0.22, 8, Math.PI / 8, 0.55);
+
+  runeDots(size * 0.40, 24, size * 0.0055, 0, 0.9);
+  runeMarks(size * 0.285, 12, Math.PI / 12, 0.86);
+
+  const coreGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 0.09);
+  coreGlow.addColorStop(0, "rgba(255,255,255,1)");
+  coreGlow.addColorStop(0.3, `rgba(${hue},0.95)`);
+  coreGlow.addColorStop(1, `rgba(${hue},0)`);
+  ctx.fillStyle = coreGlow;
+  ctx.beginPath();
+  ctx.arc(cx, cy, size * 0.09, 0, Math.PI * 2);
+  ctx.fill();
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
 }
 
 function makeGlowTexture() {
@@ -309,70 +355,15 @@ function makeGlowTexture() {
   canvas.height = 128;
   const ctx = canvas.getContext("2d");
 
-  const grad = ctx.createRadialGradient(64, 64, 4, 64, 64, 46);
+  const grad = ctx.createRadialGradient(64, 64, 3, 64, 64, 46);
   grad.addColorStop(0, "rgba(255,255,255,1)");
-  grad.addColorStop(0.28, "rgba(255,250,180,0.95)");
-  grad.addColorStop(0.62, "rgba(255,225,120,0.50)");
-  grad.addColorStop(1, "rgba(255,220,120,0)");
+  grad.addColorStop(0.2, "rgba(200,245,255,1)");
+  grad.addColorStop(0.55, "rgba(120,200,255,0.45)");
+  grad.addColorStop(1, "rgba(120,200,255,0)");
   ctx.fillStyle = grad;
   ctx.beginPath();
   ctx.arc(64, 64, 46, 0, Math.PI * 2);
   ctx.fill();
-
-  return new THREE.CanvasTexture(canvas);
-}
-
-function makeLeafTexture() {
-  const canvas = document.createElement("canvas");
-  canvas.width = 128;
-  canvas.height = 128;
-  const ctx = canvas.getContext("2d");
-
-  ctx.translate(64, 64);
-  ctx.rotate(0.2);
-
-  const grad = ctx.createLinearGradient(-20, -30, 20, 30);
-  grad.addColorStop(0, "rgba(255,185,70,1)");
-  grad.addColorStop(0.5, "rgba(220,110,30,1)");
-  grad.addColorStop(1, "rgba(168,70,22,1)");
-  ctx.fillStyle = grad;
-
-  ctx.beginPath();
-  ctx.moveTo(0, -34);
-  ctx.bezierCurveTo(26, -12, 22, 28, 0, 36);
-  ctx.bezierCurveTo(-22, 28, -28, -12, 0, -34);
-  ctx.fill();
-
-  return new THREE.CanvasTexture(canvas);
-}
-
-function makeSnowTexture() {
-  const canvas = document.createElement("canvas");
-  canvas.width = 128;
-  canvas.height = 128;
-  const ctx = canvas.getContext("2d");
-
-  ctx.translate(64, 64);
-  ctx.strokeStyle = "rgba(255,255,255,0.98)";
-  ctx.lineWidth = 4;
-  ctx.lineCap = "round";
-
-  for (let i = 0; i < 6; i++) {
-    ctx.save();
-    ctx.rotate((Math.PI / 3) * i);
-    ctx.beginPath();
-    ctx.moveTo(0, -30);
-    ctx.lineTo(0, 30);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(0, -14); ctx.lineTo(-7, -7);
-    ctx.moveTo(0, -14); ctx.lineTo(7, -7);
-    ctx.moveTo(0, 14);  ctx.lineTo(-7, 7);
-    ctx.moveTo(0, 14);  ctx.lineTo(7, 7);
-    ctx.stroke();
-    ctx.restore();
-  }
 
   return new THREE.CanvasTexture(canvas);
 }
@@ -384,9 +375,9 @@ function makeSmokeTexture() {
   const ctx = canvas.getContext("2d");
 
   const grad = ctx.createRadialGradient(64, 64, 8, 64, 64, 50);
-  grad.addColorStop(0, "rgba(255,255,255,0.72)");
-  grad.addColorStop(0.45, "rgba(240,240,245,0.46)");
-  grad.addColorStop(0.80, "rgba(220,225,235,0.18)");
+  grad.addColorStop(0, "rgba(180,225,255,0.72)");
+  grad.addColorStop(0.45, "rgba(120,170,255,0.30)");
+  grad.addColorStop(0.82, "rgba(120,170,255,0.10)");
   grad.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = grad;
   ctx.beginPath();
@@ -396,192 +387,231 @@ function makeSmokeTexture() {
   return new THREE.CanvasTexture(canvas);
 }
 
-const texSakura = makePetalTexture();
-const texLight  = makeGlowTexture();
-const texLeaf   = makeLeafTexture();
-const texSnow   = makeSnowTexture();
-const texSmoke  = makeSmokeTexture();
+const texGlow = makeGlowTexture();
+const texSmoke = makeSmokeTexture();
 
 /* ==========
-   季節パーティクル
+   床グロー
 ========== */
-const zoneConfigs = [
-  { texture: texSakura, xMin: -15.80, xMax: -13.20, yMin: -3.30, yMax: 1.8, opacity: 0.95, scaleMin: 0.22, scaleMax: 0.34, speed: 0.010, kind: "sakura" },
-  { texture: texLight,  xMin: -8.90, xMax: -6.30, yMin: -3.20, yMax: 2.1, opacity: 0.88, scaleMin: 0.14, scaleMax: 0.22, speed: 0.013, kind: "light"  },
-  { texture: texLeaf,   xMin:  6.30, xMax:  8.90, yMin: -3.30, yMax: 1.8, opacity: 0.93, scaleMin: 0.22, scaleMax: 0.34, speed: 0.010, kind: "leaf"   },
-  { texture: texSnow,   xMin:  13.20, xMax:  15.80, yMin: -3.25, yMax: 1.9, opacity: 0.92, scaleMin: 0.16, scaleMax: 0.25, speed: 0.008, kind: "snow"   }
-];
-
-const seasonalGroup = new THREE.Group();
-world.add(seasonalGroup);
-
-const seasonalParticles = [];
-
-function resetSeasonParticle(p, zone, first = false) {
-  p.userData.zone = zone;
-  p.position.x = zone.xMin + Math.random() * (zone.xMax - zone.xMin);
-  p.position.z = (Math.random() - 0.5) * 1.2;
-  p.position.y = first
-    ? zone.yMin + Math.random() * (zone.yMax - zone.yMin)
-    : zone.yMin + Math.random() * 0.12;
-
-  p.material.map = zone.texture;
-  p.material.opacity = zone.opacity;
-  p.material.rotation = Math.random() * Math.PI;
-
-  const s = zone.scaleMin + Math.random() * (zone.scaleMax - zone.scaleMin);
-  p.scale.set(s, s, 1);
-  p.userData.seed = Math.random() * Math.PI * 2;
-}
-
-zoneConfigs.forEach(zone => {
-  const count = zone.kind === "light" ? 36 : 44;
-  for (let i = 0; i < count; i++) {
-    const mat = new THREE.SpriteMaterial({
-      map: zone.texture,
-      transparent: true,
-      opacity: zone.opacity,
-      depthWrite: false,
-      depthTest: true,
-      color: 0xffffff
-    });
-    const sprite = new THREE.Sprite(mat);
-    seasonalGroup.add(sprite);
-    seasonalParticles.push(sprite);
-    resetSeasonParticle(sprite, zone, true);
-  }
-});
-
-function updateSeasonParticles(t) {
-  for (const p of seasonalParticles) {
-    const z = p.userData.zone;
-
-    p.position.y += z.speed + Math.random() * 0.0015;
-
-    if (z.kind === "sakura") {
-      p.position.x += Math.sin(t * 1.8 + p.userData.seed) * 0.004;
-      p.material.rotation += 0.01;
-    } else if (z.kind === "light") {
-      p.position.x += Math.sin(t * 2.4 + p.userData.seed) * 0.0025;
-      p.position.y += Math.sin(t * 2.6 + p.userData.seed) * 0.0018;
-      p.material.rotation += 0.002;
-    } else if (z.kind === "leaf") {
-      p.position.x += Math.sin(t * 1.7 + p.userData.seed) * 0.0035;
-      p.position.z += Math.cos(t * 1.4 + p.userData.seed) * 0.003;
-      p.material.rotation += 0.015;
-    } else if (z.kind === "snow") {
-      p.position.x += Math.sin(t * 1.2 + p.userData.seed) * 0.0018;
-      p.material.rotation += 0.004;
-    }
-
-    if (p.position.y > z.yMax) {
-      resetSeasonParticle(p, z, false);
-    }
-  }
-}
-
-/* けむり */
-const smokeGroup = new THREE.Group();
-coralGroup.add(smokeGroup);
-
-const smokeParticles = [];
-for (let i = 0; i < 28; i++) {
-  const mat = new THREE.SpriteMaterial({
-    map: texSmoke,
+const floorGlow = new THREE.Mesh(
+  new THREE.CircleGeometry(4.5, 96),
+  new THREE.MeshBasicMaterial({
+    color: 0x8fd3ff,
     transparent: true,
-    opacity: 0.42,
-    depthWrite: false
-  });
-  const sp = new THREE.Sprite(mat);
-  sp.renderOrder = 21;
-  smokeGroup.add(sp);
-  smokeParticles.push(sp);
-  resetSmoke(sp, true);
-}
+    opacity: 0.10,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending
+  })
+);
+floorGlow.rotation.x = -Math.PI / 2;
+floorGlow.position.set(0, -3.44, 0);
+world.add(floorGlow);
 
-function resetSmoke(p, first = false) {
-  p.position.set(
-    (Math.random() - 0.5) * 0.34,
-    first ? 0.72 + Math.random() * 1.1 : 0.72,
-    0.12 + (Math.random() - 0.5) * 0.12
-  );
+/* ==========
+   二重魔法陣
+========== */
+const outerMagicTexture = makeMagicCircleTexture(1024, "170,235,255");
+const innerMagicTexture = makeMagicCircleTexture(1024, "130,190,255");
 
-  const s = 0.18 + Math.random() * 0.16;
-  p.scale.set(s, s, 1);
-  p.material.opacity = 0.30 + Math.random() * 0.14;
-  p.userData.seed = Math.random() * Math.PI * 2;
-}
+const magicCircleOuter = new THREE.Mesh(
+  new THREE.CircleGeometry(3.7, 128),
+  new THREE.MeshBasicMaterial({
+    map: outerMagicTexture,
+    transparent: true,
+    opacity: 0.94,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending
+  })
+);
+magicCircleOuter.rotation.x = -Math.PI / 2;
+magicCircleOuter.position.set(0, -3.30, 0.01);
+magicCircleOuter.renderOrder = 10;
+world.add(magicCircleOuter);
 
-function updateSmoke(t) {
-  for (const p of smokeParticles) {
-    p.position.y += 0.010;
-    p.position.x += Math.sin(t * 1.5 + p.userData.seed) * 0.0028;
-    p.position.z += Math.cos(t * 1.2 + p.userData.seed) * 0.0016;
-    p.scale.x += 0.0015;
-    p.scale.y += 0.0015;
-    p.material.opacity -= 0.0014;
+const magicCircleInner = new THREE.Mesh(
+  new THREE.CircleGeometry(2.55, 128),
+  new THREE.MeshBasicMaterial({
+    map: innerMagicTexture,
+    transparent: true,
+    opacity: 0.86,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending
+  })
+);
+magicCircleInner.rotation.x = -Math.PI / 2;
+magicCircleInner.position.set(0, -3.27, 0.02);
+magicCircleInner.renderOrder = 11;
+world.add(magicCircleInner);
 
-    if (p.position.y > 2.8 || p.material.opacity <= 0.02) {
-      resetSmoke(p, false);
-    }
-  }
-}
+/* ==========
+   クリスタル
+========== */
+const crystalGroup = new THREE.Group();
+crystalGroup.position.set(0, -1.85, 0);
+world.add(crystalGroup);
 
-/* 船 */
-function makeShip(filename, x, y, z, width, height, dir, speed) {
-  const tex = loader.load(filename);
-  const mesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(width, height),
+const crystalCore = new THREE.Mesh(
+  new THREE.OctahedronGeometry(0.85, 0),
+  new THREE.MeshPhysicalMaterial({
+    color: 0xa8e7ff,
+    emissive: 0x4ea9ff,
+    emissiveIntensity: 1.6,
+    roughness: 0.05,
+    transmission: 0.15,
+    transparent: true,
+    opacity: 0.92,
+    metalness: 0.12,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.04
+  })
+);
+crystalGroup.add(crystalCore);
+
+const crystalInner = new THREE.Mesh(
+  new THREE.OctahedronGeometry(0.46, 0),
+  new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.85,
+    blending: THREE.AdditiveBlending
+  })
+);
+crystalGroup.add(crystalInner);
+
+const crystalAura = new THREE.Mesh(
+  new THREE.SphereGeometry(1.05, 32, 32),
+  new THREE.MeshBasicMaterial({
+    color: 0x90d8ff,
+    transparent: true,
+    opacity: 0.08,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending
+  })
+);
+crystalGroup.add(crystalAura);
+
+/* ==========
+   光の柱
+========== */
+const beam = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.32, 0.48, 8.5, 48, 1, true),
+  new THREE.MeshBasicMaterial({
+    color: 0x8ecfff,
+    transparent: true,
+    opacity: 0.16,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending
+  })
+);
+beam.position.set(0, 0.2, 0);
+world.add(beam);
+
+const beamCore = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.12, 0.14, 8.8, 32, 1, true),
+  new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.22,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending
+  })
+);
+beamCore.position.set(0, 0.2, 0);
+world.add(beamCore);
+
+/* ==========
+   光リング
+========== */
+const ringGroup = new THREE.Group();
+world.add(ringGroup);
+
+for (let i = 0; i < 3; i++) {
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(0.95 + i * 0.35, 0.02, 12, 90),
     new THREE.MeshBasicMaterial({
-      map: tex,
+      color: i === 0 ? 0xffffff : 0x8fcfff,
       transparent: true,
-      side: THREE.DoubleSide,
-      depthWrite: false
+      opacity: 0.42 - i * 0.08,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
     })
   );
-  mesh.position.set(x, y, z);
-  mesh.userData = { dir, speed, startZ: z, baseY: y };
-  return mesh;
+  ring.rotation.x = Math.PI / 2;
+  ring.position.y = -1.9 + i * 0.5;
+  ringGroup.add(ring);
 }
 
-const RIGHT_OUT = 30;
-const LEFT_OUT = -30;
+/* ==========
+   魔力粒子
+========== */
+const particleGroup = new THREE.Group();
+world.add(particleGroup);
 
-const ships = [
-  makeShip("ship1.png", RIGHT_OUT + 2.0, -2.98, -1.00, 2.55, 1.74, -1, 0.026),
-  makeShip("ship2.png", RIGHT_OUT + 8.0, -3.08, -1.18, 2.23, 1.54, -1, 0.020),
-  makeShip("ship3.png", LEFT_OUT - 2.0, -2.94, -0.90, 2.43, 1.64, 1, 0.024),
-  makeShip("ship4.png", LEFT_OUT - 8.0, -3.10, -1.26, 2.12, 1.46, 1, 0.018)
-];
+const magicParticles = [];
 
-ships.forEach(s => {
-  s.renderOrder = 5;
-  world.add(s);
-});
+function resetMagicParticle(p, first = false) {
+  const angle = Math.random() * Math.PI * 2;
+  const radius = 0.35 + Math.random() * 1.1;
+  p.userData.angle = angle;
+  p.userData.radius = radius;
+  p.userData.height = first ? (-3.2 + Math.random() * 5.6) : -3.2;
+  p.userData.speed = 0.012 + Math.random() * 0.009;
+  p.userData.spin = 0.012 + Math.random() * 0.018;
+  p.userData.seed = Math.random() * Math.PI * 2;
 
-function updateShips(t) {
-  ships.forEach((ship, i) => {
-    ship.position.x += ship.userData.dir * ship.userData.speed;
-    ship.position.y = ship.userData.baseY + Math.sin(t * (1.3 + i * 0.12) + i) * 0.010;
-    ship.position.z = ship.userData.startZ;
+  const s = 0.07 + Math.random() * 0.12;
+  p.scale.set(s, s, 1);
+  p.material.opacity = 0.42 + Math.random() * 0.35;
+}
 
-    if (ship.userData.dir < 0 && ship.position.x < LEFT_OUT - 2.5) {
-      ship.position.x = RIGHT_OUT + 2.5;
-    }
-
-    if (ship.userData.dir > 0 && ship.position.x > RIGHT_OUT + 2.5) {
-      ship.position.x = LEFT_OUT - 2.5;
-    }
+for (let i = 0; i < 90; i++) {
+  const mat = new THREE.SpriteMaterial({
+    map: texGlow,
+    transparent: true,
+    opacity: 0.8,
+    depthWrite: false,
+    color: i % 5 === 0 ? 0xffffff : 0xaee2ff
   });
+
+  const sprite = new THREE.Sprite(mat);
+  particleGroup.add(sprite);
+  magicParticles.push(sprite);
+  resetMagicParticle(sprite, true);
 }
 
-/* きらめき */
+function updateMagicParticles(t) {
+  for (const p of magicParticles) {
+    p.userData.height += p.userData.speed;
+    p.userData.angle += p.userData.spin;
+
+    const wobble = Math.sin(t * 2.0 + p.userData.seed) * 0.08;
+    const r = p.userData.radius + wobble;
+
+    p.position.x = Math.cos(p.userData.angle) * r;
+    p.position.z = Math.sin(p.userData.angle) * r * 0.45;
+    p.position.y = p.userData.height;
+
+    p.material.opacity = 0.35 + 0.25 * Math.sin(t * 3.0 + p.userData.seed);
+
+    if (p.userData.height > 2.8) {
+      resetMagicParticle(p, false);
+    }
+  }
+}
+
+/* ==========
+   浮遊きらめき
+========== */
 const sparkleGroup = new THREE.Group();
 world.add(sparkleGroup);
 
-for (let i = 0; i < 16; i++) {
+for (let i = 0; i < 26; i++) {
   const s = new THREE.Mesh(
-    new THREE.SphereGeometry(0.022, 8, 8),
+    new THREE.SphereGeometry(0.02 + Math.random() * 0.02, 8, 8),
     new THREE.MeshBasicMaterial({
       color: 0xffffff,
       transparent: true,
@@ -589,22 +619,110 @@ for (let i = 0; i < 16; i++) {
     })
   );
 
-  const rr = 2.1 * Math.random();
+  const rr = 2.8 * Math.random();
   const aa = Math.random() * Math.PI * 2;
-  const yy = -2.7 + Math.random() * 4.2;
+  const yy = -2.8 + Math.random() * 5.2;
 
   s.position.set(
-    Math.cos(aa) * rr * 0.55,
+    Math.cos(aa) * rr,
     yy,
-    Math.sin(aa) * rr * 0.55
+    Math.sin(aa) * rr * 0.45
   );
 
   s.userData = {
+    baseX: s.position.x,
     baseY: s.position.y,
+    baseZ: s.position.z,
     phase: Math.random() * Math.PI * 2
   };
 
   sparkleGroup.add(s);
+}
+
+/* ==========
+   霧
+========== */
+const smokeGroup = new THREE.Group();
+world.add(smokeGroup);
+
+const smokeParticles = [];
+
+function resetSmoke(p, first = false) {
+  p.position.set(
+    (Math.random() - 0.5) * 3.2,
+    first ? -3.0 + Math.random() * 1.2 : -3.0,
+    (Math.random() - 0.5) * 1.1
+  );
+
+  const s = 0.5 + Math.random() * 0.8;
+  p.scale.set(s, s, 1);
+  p.material.opacity = 0.08 + Math.random() * 0.08;
+  p.userData.seed = Math.random() * Math.PI * 2;
+}
+
+for (let i = 0; i < 24; i++) {
+  const mat = new THREE.SpriteMaterial({
+    map: texSmoke,
+    transparent: true,
+    opacity: 0.12,
+    depthWrite: false
+  });
+  const sp = new THREE.Sprite(mat);
+  smokeGroup.add(sp);
+  smokeParticles.push(sp);
+  resetSmoke(sp, true);
+}
+
+function updateSmoke(t) {
+  for (const p of smokeParticles) {
+    p.position.y += 0.004;
+    p.position.x += Math.sin(t * 1.0 + p.userData.seed) * 0.002;
+    p.scale.x += 0.0008;
+    p.scale.y += 0.0008;
+    p.material.opacity -= 0.00035;
+
+    if (p.position.y > -0.8 || p.material.opacity <= 0.02) {
+      resetSmoke(p, false);
+    }
+  }
+}
+
+/* ==========
+   小クリスタル群
+========== */
+const shardGroup = new THREE.Group();
+world.add(shardGroup);
+
+for (let i = 0; i < 12; i++) {
+  const shard = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.14 + Math.random() * 0.12, 0),
+    new THREE.MeshPhysicalMaterial({
+      color: 0x9edcff,
+      emissive: 0x377dff,
+      emissiveIntensity: 0.8,
+      roughness: 0.12,
+      transparent: true,
+      opacity: 0.85,
+      clearcoat: 1
+    })
+  );
+
+  const a = (Math.PI * 2 * i) / 12;
+  const r = 1.8 + Math.random() * 1.0;
+  shard.position.set(
+    Math.cos(a) * r,
+    -2.5 + Math.random() * 1.8,
+    Math.sin(a) * r * 0.36
+  );
+
+  shard.userData = {
+    baseY: shard.position.y,
+    phase: Math.random() * Math.PI * 2,
+    rotX: 0.01 + Math.random() * 0.02,
+    rotY: 0.01 + Math.random() * 0.02
+  };
+
+  shardGroup.add(shard);
 }
 
 /* ==========
@@ -675,7 +793,7 @@ async function startAll() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "ocean_coral_record.webm";
+      a.download = "magic_circle_crystal_world.webm";
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -737,21 +855,53 @@ function animate() {
 
   const t = clock.getElapsedTime();
 
-  updateSeasonParticles(t);
+  updateMagicParticles(t);
   updateSmoke(t);
-  updateShips(t);
 
-  waterPlane.material.opacity = 0.08 + Math.sin(t * 1.5) * 0.015;
-  waterGlow.material.opacity = 0.04 + Math.sin(t * 2.2) * 0.012;
+  magicCircleOuter.rotation.z = t * 0.16;
+  magicCircleInner.rotation.z = -t * 0.28;
 
-  shimmerPlane.material.opacity = 0.36 + Math.sin(t * 1.6) * 0.12;
-  shimmerPlane.position.y = -4.6 + Math.sin(t * 0.7) * 0.06;
-  shimmerTexture.offset.y -= 0.0009;
+  magicCircleOuter.material.opacity = 0.84 + Math.sin(t * 1.8) * 0.08;
+  magicCircleInner.material.opacity = 0.72 + Math.sin(t * 2.2 + 0.8) * 0.10;
+
+  crystalGroup.rotation.y += 0.01;
+  crystalCore.rotation.x = Math.sin(t * 0.8) * 0.08;
+  crystalCore.rotation.z = Math.cos(t * 0.7) * 0.08;
+  crystalGroup.position.y = -1.85 + Math.sin(t * 1.6) * 0.12;
+
+  crystalInner.rotation.y -= 0.018;
+  crystalInner.rotation.x += 0.01;
+
+  crystalAura.scale.setScalar(1 + Math.sin(t * 2.0) * 0.05);
+
+  beam.material.opacity = 0.11 + Math.sin(t * 2.1) * 0.05;
+  beamCore.material.opacity = 0.18 + Math.sin(t * 2.5 + 0.5) * 0.06;
+  beam.scale.x = 1 + Math.sin(t * 1.4) * 0.05;
+  beam.scale.z = 1 + Math.cos(t * 1.2) * 0.05;
+
+  ringGroup.children.forEach((ring, i) => {
+    ring.rotation.z = t * (0.35 + i * 0.08) * (i % 2 === 0 ? 1 : -1);
+    ring.position.y = -1.95 + i * 0.5 + Math.sin(t * 1.8 + i) * 0.05;
+    ring.material.opacity = 0.25 + 0.12 * Math.sin(t * 2.0 + i);
+  });
 
   sparkleGroup.children.forEach((p, i) => {
-    p.position.y = p.userData.baseY + Math.sin(t * 1.7 + p.userData.phase) * 0.025;
-    p.material.opacity = 0.38 + 0.22 * Math.sin(t * 2.0 + i);
+    p.position.y = p.userData.baseY + Math.sin(t * 1.6 + p.userData.phase) * 0.06;
+    p.position.x = p.userData.baseX + Math.cos(t * 1.4 + p.userData.phase) * 0.03;
+    p.position.z = p.userData.baseZ + Math.sin(t * 1.2 + p.userData.phase) * 0.02;
+    p.material.opacity = 0.35 + 0.3 * Math.sin(t * 2.0 + i);
   });
+
+  shardGroup.children.forEach((s, i) => {
+    s.rotation.x += s.userData.rotX;
+    s.rotation.y += s.userData.rotY;
+    s.position.y = s.userData.baseY + Math.sin(t * 1.5 + s.userData.phase) * 0.08;
+  });
+
+  floorGlow.material.opacity = 0.08 + Math.sin(t * 1.5) * 0.03;
+  frontMist.material.opacity = 0.04 + Math.sin(t * 0.8) * 0.02;
+
+  pointLight.intensity = 3.1 + Math.sin(t * 2.0) * 0.5;
 
   controls.update();
   renderer.render(scene, camera);
