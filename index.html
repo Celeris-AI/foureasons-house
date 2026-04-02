@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Magic Circle Crystal World - Auto Record Version</title>
+<title>Magic Circle Triple Colors</title>
 
 <style>
   html, body {
@@ -43,7 +43,7 @@
     align-items: center;
     justify-content: center;
     background:
-      radial-gradient(circle at center, rgba(80,120,180,0.15), rgba(0,0,0,0.72));
+      radial-gradient(circle at center, rgba(80,120,180,0.12), rgba(0,0,0,0.74));
     color: white;
     text-align: center;
     padding: 24px;
@@ -55,7 +55,7 @@
   }
 
   #startCard {
-    max-width: 620px;
+    max-width: 700px;
     padding: 24px 28px;
     border-radius: 24px;
     background: rgba(255,255,255,0.10);
@@ -86,13 +86,13 @@
 </head>
 <body>
 
-<div id="status">魔導世界を読み込み中…</div>
+<div id="status">三重魔法陣を読み込み中…</div>
 
 <div id="startOverlay">
   <div id="startCard">
-    <h1>🔮💎 クリックで開始</h1>
+    <h1>✨ クリックで開始</h1>
     <p>
-      背景が見えていれば準備OKです。<br>
+      左はゴールド、中央はサファイアブルー、右はルビーレッドの三重魔法陣です。<br>
       クリックすると、音楽つき録画が始まり、3分30秒後に自動保存されます。
     </p>
   </div>
@@ -112,12 +112,12 @@ const bgm = document.getElementById("bgm");
 const scene = new THREE.Scene();
 
 const camera = new THREE.PerspectiveCamera(
-  50,
+  48,
   window.innerWidth / window.innerHeight,
   0.1,
   1000
 );
-camera.position.set(0, 2.7, 14);
+camera.position.set(0, 3.2, 18.8);
 
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
@@ -134,30 +134,20 @@ controls.enableDamping = true;
 controls.enableRotate = false;
 controls.enableZoom = false;
 controls.enablePan = false;
-controls.target.set(0, -0.8, -5.8);
+controls.target.set(0, -1.25, -6.2);
 
 const loader = new THREE.TextureLoader();
 
-/* ==========
-   ライト
-========== */
-scene.add(new THREE.AmbientLight(0xffffff, 1.25));
+scene.add(new THREE.AmbientLight(0xffffff, 1.2));
 
-const dirLight = new THREE.DirectionalLight(0xd9eeff, 1.8);
-dirLight.position.set(7, 10, 8);
+const dirLight = new THREE.DirectionalLight(0xe8f4ff, 1.7);
+dirLight.position.set(8, 10, 7);
 scene.add(dirLight);
 
-const fillLight = new THREE.DirectionalLight(0xa7cfff, 0.8);
-fillLight.position.set(-8, 4, -6);
+const fillLight = new THREE.DirectionalLight(0xbfd9ff, 0.7);
+fillLight.position.set(-9, 4, -7);
 scene.add(fillLight);
 
-const pointLight = new THREE.PointLight(0x8fd3ff, 3.5, 30, 2);
-pointLight.position.set(0, -1.0, -6.2);
-scene.add(pointLight);
-
-/* ==========
-   背景
-========== */
 loader.load("sea_bg.png", (texture) => {
   texture.colorSpace = THREE.SRGBColorSpace;
   scene.background = texture;
@@ -167,28 +157,32 @@ loader.load("sea_bg.png", (texture) => {
   statusEl.textContent = "背景画像なしで起動：中央をクリックで録画開始";
 });
 
-/* ==========
-   前景の霧と床光
-========== */
 const frontMist = new THREE.Mesh(
-  new THREE.PlaneGeometry(44, 14),
+  new THREE.PlaneGeometry(58, 16),
   new THREE.MeshBasicMaterial({
-    color: 0x6ab8ff,
+    color: 0x9cc9ff,
     transparent: true,
-    opacity: 0.06,
+    opacity: 0.055,
     depthWrite: false
   })
 );
-frontMist.position.set(0, -4.2, -8);
+frontMist.position.set(0, -4.35, -8.2);
 scene.add(frontMist);
 
 const world = new THREE.Group();
 world.position.set(0, -0.9, -6.2);
 scene.add(world);
 
-/* ==========
-   テクスチャ作成
-========== */
+function parseHue(hue) {
+  const [r, g, b] = hue.split(",").map(v => Number(v.trim()));
+  return { r, g, b };
+}
+
+function colorFromHue(hue) {
+  const { r, g, b } = parseHue(hue);
+  return new THREE.Color(r / 255, g / 255, b / 255);
+}
+
 function makeMagicCircleTexture(size = 1024, hue = "170,235,255") {
   const canvas = document.createElement("canvas");
   canvas.width = size;
@@ -303,7 +297,6 @@ function makeMagicCircleTexture(size = 1024, hue = "170,235,255") {
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(a + Math.PI / 2);
-
       ctx.beginPath();
       ctx.moveTo(0, -size * 0.014);
       ctx.lineTo(0, size * 0.014);
@@ -312,7 +305,6 @@ function makeMagicCircleTexture(size = 1024, hue = "170,235,255") {
       ctx.moveTo(0, -size * 0.014);
       ctx.lineTo(size * 0.007, -size * 0.022);
       ctx.stroke();
-
       ctx.restore();
     }
     ctx.restore();
@@ -357,9 +349,9 @@ function makeGlowTexture() {
 
   const grad = ctx.createRadialGradient(64, 64, 3, 64, 64, 46);
   grad.addColorStop(0, "rgba(255,255,255,1)");
-  grad.addColorStop(0.2, "rgba(200,245,255,1)");
-  grad.addColorStop(0.55, "rgba(120,200,255,0.45)");
-  grad.addColorStop(1, "rgba(120,200,255,0)");
+  grad.addColorStop(0.2, "rgba(255,255,255,0.95)");
+  grad.addColorStop(0.55, "rgba(255,255,255,0.38)");
+  grad.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = grad;
   ctx.beginPath();
   ctx.arc(64, 64, 46, 0, Math.PI * 2);
@@ -375,9 +367,9 @@ function makeSmokeTexture() {
   const ctx = canvas.getContext("2d");
 
   const grad = ctx.createRadialGradient(64, 64, 8, 64, 64, 50);
-  grad.addColorStop(0, "rgba(180,225,255,0.72)");
-  grad.addColorStop(0.45, "rgba(120,170,255,0.30)");
-  grad.addColorStop(0.82, "rgba(120,170,255,0.10)");
+  grad.addColorStop(0, "rgba(220,235,255,0.68)");
+  grad.addColorStop(0.45, "rgba(160,180,255,0.26)");
+  grad.addColorStop(0.82, "rgba(140,170,255,0.08)");
   grad.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = grad;
   ctx.beginPath();
@@ -389,214 +381,293 @@ function makeSmokeTexture() {
 
 const texGlow = makeGlowTexture();
 const texSmoke = makeSmokeTexture();
+const altarSets = [];
 
-/* ==========
-   床グロー
-========== */
-const floorGlow = new THREE.Mesh(
-  new THREE.CircleGeometry(4.5, 96),
-  new THREE.MeshBasicMaterial({
-    color: 0x8fd3ff,
-    transparent: true,
-    opacity: 0.10,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending
-  })
-);
-floorGlow.rotation.x = -Math.PI / 2;
-floorGlow.position.set(0, -3.44, 0);
-world.add(floorGlow);
+function createMagicCircleSet(config) {
+  const {
+    x,
+    outerHue,
+    innerHue,
+    glowColor,
+    crystalColor,
+    emissiveColor,
+    auraColor,
+    particleColor,
+    ringColor,
+    rotationScale,
+    pulseOffset
+  } = config;
 
-/* ==========
-   二重魔法陣
-========== */
-const outerMagicTexture = makeMagicCircleTexture(1024, "170,235,255");
-const innerMagicTexture = makeMagicCircleTexture(1024, "130,190,255");
+  const group = new THREE.Group();
+  group.position.x = x;
+  world.add(group);
 
-const magicCircleOuter = new THREE.Mesh(
-  new THREE.CircleGeometry(3.7, 128),
-  new THREE.MeshBasicMaterial({
-    map: outerMagicTexture,
-    transparent: true,
-    opacity: 0.94,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending
-  })
-);
-magicCircleOuter.rotation.x = -Math.PI / 2;
-magicCircleOuter.position.set(0, -3.30, 0.01);
-magicCircleOuter.renderOrder = 10;
-world.add(magicCircleOuter);
-
-const magicCircleInner = new THREE.Mesh(
-  new THREE.CircleGeometry(2.55, 128),
-  new THREE.MeshBasicMaterial({
-    map: innerMagicTexture,
-    transparent: true,
-    opacity: 0.86,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending
-  })
-);
-magicCircleInner.rotation.x = -Math.PI / 2;
-magicCircleInner.position.set(0, -3.27, 0.02);
-magicCircleInner.renderOrder = 11;
-world.add(magicCircleInner);
-
-/* ==========
-   クリスタル
-========== */
-const crystalGroup = new THREE.Group();
-crystalGroup.position.set(0, -1.85, 0);
-world.add(crystalGroup);
-
-const crystalCore = new THREE.Mesh(
-  new THREE.OctahedronGeometry(0.85, 0),
-  new THREE.MeshPhysicalMaterial({
-    color: 0xa8e7ff,
-    emissive: 0x4ea9ff,
-    emissiveIntensity: 1.6,
-    roughness: 0.05,
-    transmission: 0.15,
-    transparent: true,
-    opacity: 0.92,
-    metalness: 0.12,
-    clearcoat: 1.0,
-    clearcoatRoughness: 0.04
-  })
-);
-crystalGroup.add(crystalCore);
-
-const crystalInner = new THREE.Mesh(
-  new THREE.OctahedronGeometry(0.46, 0),
-  new THREE.MeshBasicMaterial({
-    color: 0xffffff,
-    transparent: true,
-    opacity: 0.85,
-    blending: THREE.AdditiveBlending
-  })
-);
-crystalGroup.add(crystalInner);
-
-const crystalAura = new THREE.Mesh(
-  new THREE.SphereGeometry(1.05, 32, 32),
-  new THREE.MeshBasicMaterial({
-    color: 0x90d8ff,
-    transparent: true,
-    opacity: 0.08,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending
-  })
-);
-crystalGroup.add(crystalAura);
-
-
-/* ==========
-   光リング
-========== */
-const ringGroup = new THREE.Group();
-world.add(ringGroup);
-
-for (let i = 0; i < 3; i++) {
-  const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(0.95 + i * 0.35, 0.02, 12, 90),
+  const floorGlow = new THREE.Mesh(
+    new THREE.CircleGeometry(3.5, 96),
     new THREE.MeshBasicMaterial({
-      color: i === 0 ? 0xffffff : 0x8fcfff,
+      color: glowColor,
       transparent: true,
-      opacity: 0.42 - i * 0.08,
+      opacity: 0.11,
       depthWrite: false,
       blending: THREE.AdditiveBlending
     })
   );
-  ring.rotation.x = Math.PI / 2;
-  ring.position.y = -1.9 + i * 0.5;
-  ringGroup.add(ring);
-}
+  floorGlow.rotation.x = -Math.PI / 2;
+  floorGlow.position.set(0, -3.44, 0);
+  group.add(floorGlow);
 
-/* ==========
-   魔力粒子
-========== */
-const particleGroup = new THREE.Group();
-world.add(particleGroup);
+  const outerMagicTexture = makeMagicCircleTexture(1024, outerHue);
+  const innerMagicTexture = makeMagicCircleTexture(1024, innerHue);
 
-const magicParticles = [];
+  const magicCircleOuter = new THREE.Mesh(
+    new THREE.CircleGeometry(3.05, 128),
+    new THREE.MeshBasicMaterial({
+      map: outerMagicTexture,
+      transparent: true,
+      opacity: 0.94,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending
+    })
+  );
+  magicCircleOuter.rotation.x = -Math.PI / 2;
+  magicCircleOuter.position.set(0, -3.30, 0.01);
+  magicCircleOuter.renderOrder = 10;
+  group.add(magicCircleOuter);
 
-function resetMagicParticle(p, first = false) {
-  const angle = Math.random() * Math.PI * 2;
-  const radius = 0.35 + Math.random() * 1.1;
-  p.userData.angle = angle;
-  p.userData.radius = radius;
-  p.userData.height = first ? (-3.2 + Math.random() * 5.6) : -3.2;
-  p.userData.speed = 0.012 + Math.random() * 0.009;
-  p.userData.spin = 0.012 + Math.random() * 0.018;
-  p.userData.seed = Math.random() * Math.PI * 2;
+  const magicCircleInner = new THREE.Mesh(
+    new THREE.CircleGeometry(2.12, 128),
+    new THREE.MeshBasicMaterial({
+      map: innerMagicTexture,
+      transparent: true,
+      opacity: 0.86,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending
+    })
+  );
+  magicCircleInner.rotation.x = -Math.PI / 2;
+  magicCircleInner.position.set(0, -3.27, 0.02);
+  magicCircleInner.renderOrder = 11;
+  group.add(magicCircleInner);
 
-  const s = 0.07 + Math.random() * 0.12;
-  p.scale.set(s, s, 1);
-  p.material.opacity = 0.42 + Math.random() * 0.35;
-}
+  const crystalGroup = new THREE.Group();
+  crystalGroup.position.set(0, -2.0, 0);
+  group.add(crystalGroup);
 
-for (let i = 0; i < 90; i++) {
-  const mat = new THREE.SpriteMaterial({
-    map: texGlow,
-    transparent: true,
-    opacity: 0.8,
-    depthWrite: false,
-    color: i % 5 === 0 ? 0xffffff : 0xaee2ff
-  });
+  const crystalCore = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.72, 0),
+    new THREE.MeshPhysicalMaterial({
+      color: crystalColor,
+      emissive: emissiveColor,
+      emissiveIntensity: 1.45,
+      roughness: 0.05,
+      transmission: 0.12,
+      transparent: true,
+      opacity: 0.92,
+      metalness: 0.10,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.05
+    })
+  );
+  crystalGroup.add(crystalCore);
 
-  const sprite = new THREE.Sprite(mat);
-  particleGroup.add(sprite);
-  magicParticles.push(sprite);
-  resetMagicParticle(sprite, true);
-}
-
-function updateMagicParticles(t) {
-  for (const p of magicParticles) {
-    p.userData.height += p.userData.speed;
-    p.userData.angle += p.userData.spin;
-
-    const wobble = Math.sin(t * 2.0 + p.userData.seed) * 0.08;
-    const r = p.userData.radius + wobble;
-
-    p.position.x = Math.cos(p.userData.angle) * r;
-    p.position.z = Math.sin(p.userData.angle) * r * 0.45;
-    p.position.y = p.userData.height;
-
-    p.material.opacity = 0.35 + 0.25 * Math.sin(t * 3.0 + p.userData.seed);
-
-    if (p.userData.height > 2.8) {
-      resetMagicParticle(p, false);
-    }
-  }
-}
-
-/* ==========
-   浮遊きらめき
-========== */
-const sparkleGroup = new THREE.Group();
-world.add(sparkleGroup);
-
-for (let i = 0; i < 26; i++) {
-  const s = new THREE.Mesh(
-    new THREE.SphereGeometry(0.02 + Math.random() * 0.02, 8, 8),
+  const crystalInner = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.38, 0),
     new THREE.MeshBasicMaterial({
       color: 0xffffff,
       transparent: true,
-      opacity: 0.7
+      opacity: 0.82,
+      blending: THREE.AdditiveBlending
+    })
+  );
+  crystalGroup.add(crystalInner);
+
+  const crystalAura = new THREE.Mesh(
+    new THREE.SphereGeometry(0.95, 28, 28),
+    new THREE.MeshBasicMaterial({
+      color: auraColor,
+      transparent: true,
+      opacity: 0.08,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    })
+  );
+  crystalGroup.add(crystalAura);
+
+  const ringGroup = new THREE.Group();
+  group.add(ringGroup);
+
+  for (let i = 0; i < 3; i++) {
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(0.78 + i * 0.28, 0.018, 12, 80),
+      new THREE.MeshBasicMaterial({
+        color: i === 0 ? 0xffffff : ringColor,
+        transparent: true,
+        opacity: 0.38 - i * 0.06,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      })
+    );
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = -2.02 + i * 0.42;
+    ringGroup.add(ring);
+  }
+
+  const particles = [];
+
+  function resetParticle(sprite, first = false) {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 0.30 + Math.random() * 0.95;
+    sprite.userData.angle = angle;
+    sprite.userData.radius = radius;
+    sprite.userData.height = first ? (-3.15 + Math.random() * 5.1) : -3.15;
+    sprite.userData.speed = 0.010 + Math.random() * 0.008;
+    sprite.userData.spin = 0.010 + Math.random() * 0.014;
+    sprite.userData.seed = Math.random() * Math.PI * 2;
+
+    const s = 0.05 + Math.random() * 0.09;
+    sprite.scale.set(s, s, 1);
+    sprite.material.opacity = 0.38 + Math.random() * 0.28;
+  }
+
+  for (let i = 0; i < 34; i++) {
+    const mat = new THREE.SpriteMaterial({
+      map: texGlow,
+      transparent: true,
+      opacity: 0.7,
+      depthWrite: false,
+      color: i % 6 === 0 ? 0xffffff : particleColor
+    });
+
+    const sprite = new THREE.Sprite(mat);
+    group.add(sprite);
+    particles.push(sprite);
+    resetParticle(sprite, true);
+  }
+
+  const shards = [];
+  for (let i = 0; i < 8; i++) {
+    const shard = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.10 + Math.random() * 0.08, 0),
+      new THREE.MeshPhysicalMaterial({
+        color: crystalColor,
+        emissive: emissiveColor,
+        emissiveIntensity: 0.75,
+        roughness: 0.12,
+        transparent: true,
+        opacity: 0.82,
+        clearcoat: 1
+      })
+    );
+
+    const a = (Math.PI * 2 * i) / 8;
+    const r = 1.25 + Math.random() * 0.6;
+    shard.position.set(
+      Math.cos(a) * r,
+      -2.5 + Math.random() * 1.4,
+      Math.sin(a) * r * 0.34
+    );
+
+    shard.userData = {
+      baseY: shard.position.y,
+      phase: Math.random() * Math.PI * 2,
+      rotX: 0.008 + Math.random() * 0.018,
+      rotY: 0.008 + Math.random() * 0.018
+    };
+
+    group.add(shard);
+    shards.push(shard);
+  }
+
+  const light = new THREE.PointLight(glowColor, 2.2, 22, 2);
+  light.position.set(0, -1.15, 0.1);
+  group.add(light);
+
+  return {
+    group,
+    floorGlow,
+    magicCircleOuter,
+    magicCircleInner,
+    crystalGroup,
+    crystalCore,
+    crystalInner,
+    crystalAura,
+    ringGroup,
+    particles,
+    resetParticle,
+    shards,
+    light,
+    rotationScale,
+    pulseOffset
+  };
+}
+
+altarSets.push(
+  createMagicCircleSet({
+    x: -5.2,
+    outerHue: "255,220,110",
+    innerHue: "255,185,70",
+    glowColor: 0xffcf5d,
+    crystalColor: 0xffe08a,
+    emissiveColor: 0xffa81e,
+    auraColor: 0xffefbe,
+    particleColor: 0xffd36e,
+    ringColor: 0xffd36e,
+    rotationScale: 0.92,
+    pulseOffset: 0.0
+  })
+);
+
+altarSets.push(
+  createMagicCircleSet({
+    x: 0,
+    outerHue: "90,175,255",
+    innerHue: "120,225,255",
+    glowColor: 0x6ebdff,
+    crystalColor: 0x9fd8ff,
+    emissiveColor: 0x2b72ff,
+    auraColor: 0x9fd8ff,
+    particleColor: 0x9fd8ff,
+    ringColor: 0x83c7ff,
+    rotationScale: 1.0,
+    pulseOffset: 1.2
+  })
+);
+
+altarSets.push(
+  createMagicCircleSet({
+    x: 5.2,
+    outerHue: "255,86,110",
+    innerHue: "255,120,150",
+    glowColor: 0xff5d74,
+    crystalColor: 0xff92aa,
+    emissiveColor: 0xff2748,
+    auraColor: 0xffb2bf,
+    particleColor: 0xff8ea1,
+    ringColor: 0xff8ea1,
+    rotationScale: 1.08,
+    pulseOffset: 2.3
+  })
+);
+
+const sparkleGroup = new THREE.Group();
+world.add(sparkleGroup);
+
+for (let i = 0; i < 40; i++) {
+  const s = new THREE.Mesh(
+    new THREE.SphereGeometry(0.016 + Math.random() * 0.02, 8, 8),
+    new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.72
     })
   );
 
-  const rr = 2.8 * Math.random();
-  const aa = Math.random() * Math.PI * 2;
-  const yy = -2.8 + Math.random() * 5.2;
-
   s.position.set(
-    Math.cos(aa) * rr,
-    yy,
-    Math.sin(aa) * rr * 0.45
+    (Math.random() - 0.5) * 13.0,
+    -2.7 + Math.random() * 5.4,
+    (Math.random() - 0.5) * 2.1
   );
 
   s.userData = {
@@ -609,32 +680,28 @@ for (let i = 0; i < 26; i++) {
   sparkleGroup.add(s);
 }
 
-/* ==========
-   霧
-========== */
 const smokeGroup = new THREE.Group();
 world.add(smokeGroup);
-
 const smokeParticles = [];
 
 function resetSmoke(p, first = false) {
   p.position.set(
-    (Math.random() - 0.5) * 3.2,
-    first ? -3.0 + Math.random() * 1.2 : -3.0,
-    (Math.random() - 0.5) * 1.1
+    (Math.random() - 0.5) * 12.6,
+    first ? -3.2 + Math.random() * 1.2 : -3.2,
+    (Math.random() - 0.5) * 1.6
   );
 
-  const s = 0.5 + Math.random() * 0.8;
+  const s = 0.55 + Math.random() * 0.9;
   p.scale.set(s, s, 1);
-  p.material.opacity = 0.08 + Math.random() * 0.08;
+  p.material.opacity = 0.07 + Math.random() * 0.07;
   p.userData.seed = Math.random() * Math.PI * 2;
 }
 
-for (let i = 0; i < 24; i++) {
+for (let i = 0; i < 28; i++) {
   const mat = new THREE.SpriteMaterial({
     map: texSmoke,
     transparent: true,
-    opacity: 0.12,
+    opacity: 0.1,
     depthWrite: false
   });
   const sp = new THREE.Sprite(mat);
@@ -646,58 +713,17 @@ for (let i = 0; i < 24; i++) {
 function updateSmoke(t) {
   for (const p of smokeParticles) {
     p.position.y += 0.004;
-    p.position.x += Math.sin(t * 1.0 + p.userData.seed) * 0.002;
+    p.position.x += Math.sin(t * 0.9 + p.userData.seed) * 0.0025;
     p.scale.x += 0.0008;
     p.scale.y += 0.0008;
     p.material.opacity -= 0.00035;
 
-    if (p.position.y > -0.8 || p.material.opacity <= 0.02) {
+    if (p.position.y > -0.8 || p.material.opacity <= 0.018) {
       resetSmoke(p, false);
     }
   }
 }
 
-/* ==========
-   小クリスタル群
-========== */
-const shardGroup = new THREE.Group();
-world.add(shardGroup);
-
-for (let i = 0; i < 12; i++) {
-  const shard = new THREE.Mesh(
-    new THREE.OctahedronGeometry(0.14 + Math.random() * 0.12, 0),
-    new THREE.MeshPhysicalMaterial({
-      color: 0x9edcff,
-      emissive: 0x377dff,
-      emissiveIntensity: 0.8,
-      roughness: 0.12,
-      transparent: true,
-      opacity: 0.85,
-      clearcoat: 1
-    })
-  );
-
-  const a = (Math.PI * 2 * i) / 12;
-  const r = 1.8 + Math.random() * 1.0;
-  shard.position.set(
-    Math.cos(a) * r,
-    -2.5 + Math.random() * 1.8,
-    Math.sin(a) * r * 0.36
-  );
-
-  shard.userData = {
-    baseY: shard.position.y,
-    phase: Math.random() * Math.PI * 2,
-    rotX: 0.01 + Math.random() * 0.02,
-    rotY: 0.01 + Math.random() * 0.02
-  };
-
-  shardGroup.add(shard);
-}
-
-/* ==========
-   録画
-========== */
 let audioCtx = null;
 let audioSourceNode = null;
 let mediaRecorder = null;
@@ -763,7 +789,7 @@ async function startAll() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "magic_circle_crystal_world.webm";
+      a.download = "magic_circle_triple_colors.webm";
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -803,6 +829,11 @@ function stopAll() {
     mediaRecorder.stop();
   }
 
+  if (autoStopTimer) {
+    clearTimeout(autoStopTimer);
+    autoStopTimer = null;
+  }
+
   statusEl.textContent = "保存中…";
 }
 
@@ -815,9 +846,6 @@ startOverlay.addEventListener("click", async () => {
   await startAll();
 });
 
-/* ==========
-   アニメーション
-========== */
 const clock = new THREE.Clock();
 
 function animate() {
@@ -825,48 +853,69 @@ function animate() {
 
   const t = clock.getElapsedTime();
 
-  updateMagicParticles(t);
   updateSmoke(t);
 
-  magicCircleOuter.rotation.z = t * 0.16;
-  magicCircleInner.rotation.z = -t * 0.28;
+  altarSets.forEach((set, setIndex) => {
+    const tt = t + set.pulseOffset;
 
-  magicCircleOuter.material.opacity = 0.84 + Math.sin(t * 1.8) * 0.08;
-  magicCircleInner.material.opacity = 0.72 + Math.sin(t * 2.2 + 0.8) * 0.10;
+    set.magicCircleOuter.rotation.z = tt * 0.16 * set.rotationScale;
+    set.magicCircleInner.rotation.z = -tt * 0.28 * set.rotationScale;
 
-  crystalGroup.rotation.y += 0.01;
-  crystalCore.rotation.x = Math.sin(t * 0.8) * 0.08;
-  crystalCore.rotation.z = Math.cos(t * 0.7) * 0.08;
-  crystalGroup.position.y = -1.85 + Math.sin(t * 1.6) * 0.12;
+    set.magicCircleOuter.material.opacity = 0.82 + Math.sin(tt * 1.8) * 0.08;
+    set.magicCircleInner.material.opacity = 0.70 + Math.sin(tt * 2.2 + 0.8) * 0.10;
 
-  crystalInner.rotation.y -= 0.018;
-  crystalInner.rotation.x += 0.01;
+    set.floorGlow.material.opacity = 0.08 + Math.sin(tt * 1.5) * 0.03;
 
-  crystalAura.scale.setScalar(1 + Math.sin(t * 2.0) * 0.05);
+    set.crystalGroup.rotation.y += 0.01;
+    set.crystalCore.rotation.x = Math.sin(tt * 0.8) * 0.08;
+    set.crystalCore.rotation.z = Math.cos(tt * 0.7) * 0.08;
+    set.crystalGroup.position.y = -2.0 + Math.sin(tt * 1.6) * 0.12;
 
-  ringGroup.children.forEach((ring, i) => {
-    ring.rotation.z = t * (0.35 + i * 0.08) * (i % 2 === 0 ? 1 : -1);
-    ring.position.y = -1.95 + i * 0.5 + Math.sin(t * 1.8 + i) * 0.05;
-    ring.material.opacity = 0.25 + 0.12 * Math.sin(t * 2.0 + i);
+    set.crystalInner.rotation.y -= 0.018;
+    set.crystalInner.rotation.x += 0.01;
+    set.crystalAura.scale.setScalar(1 + Math.sin(tt * 2.0) * 0.05);
+
+    set.ringGroup.children.forEach((ring, i) => {
+      ring.rotation.z = tt * (0.36 + i * 0.08) * (i % 2 === 0 ? 1 : -1);
+      ring.position.y = -2.06 + i * 0.42 + Math.sin(tt * 1.8 + i) * 0.05;
+      ring.material.opacity = 0.22 + 0.11 * Math.sin(tt * 2.0 + i);
+    });
+
+    for (const p of set.particles) {
+      p.userData.height += p.userData.speed;
+      p.userData.angle += p.userData.spin;
+
+      const wobble = Math.sin(tt * 2.0 + p.userData.seed) * 0.08;
+      const r = p.userData.radius + wobble;
+
+      p.position.x = Math.cos(p.userData.angle) * r;
+      p.position.z = Math.sin(p.userData.angle) * r * 0.45;
+      p.position.y = p.userData.height;
+
+      p.material.opacity = 0.30 + 0.24 * Math.sin(tt * 3.0 + p.userData.seed);
+
+      if (p.userData.height > 2.45) {
+        set.resetParticle(p, false);
+      }
+    }
+
+    set.shards.forEach((s) => {
+      s.rotation.x += s.userData.rotX;
+      s.rotation.y += s.userData.rotY;
+      s.position.y = s.userData.baseY + Math.sin(tt * 1.45 + s.userData.phase) * 0.08;
+    });
+
+    set.light.intensity = 1.95 + Math.sin(tt * 2.0 + setIndex) * 0.35;
   });
 
   sparkleGroup.children.forEach((p, i) => {
     p.position.y = p.userData.baseY + Math.sin(t * 1.6 + p.userData.phase) * 0.06;
     p.position.x = p.userData.baseX + Math.cos(t * 1.4 + p.userData.phase) * 0.03;
     p.position.z = p.userData.baseZ + Math.sin(t * 1.2 + p.userData.phase) * 0.02;
-    p.material.opacity = 0.35 + 0.3 * Math.sin(t * 2.0 + i);
+    p.material.opacity = 0.34 + 0.3 * Math.sin(t * 2.0 + i);
   });
 
-  shardGroup.children.forEach((s, i) => {
-    s.rotation.x += s.userData.rotX;
-    s.rotation.y += s.userData.rotY;
-    s.position.y = s.userData.baseY + Math.sin(t * 1.5 + s.userData.phase) * 0.08;
-  });
-
-  floorGlow.material.opacity = 0.08 + Math.sin(t * 1.5) * 0.03;
-  frontMist.material.opacity = 0.04 + Math.sin(t * 0.8) * 0.02;
-
-  pointLight.intensity = 3.1 + Math.sin(t * 2.0) * 0.5;
+  frontMist.material.opacity = 0.035 + Math.sin(t * 0.8) * 0.018;
 
   controls.update();
   renderer.render(scene, camera);
