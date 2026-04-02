@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Ocean Coral - Record with Music</title>
+<title>Ocean Coral - Auto Record with Music</title>
 
 <style>
   html, body {
@@ -15,125 +15,63 @@
     font-family: "Yu Gothic", "Hiragino Sans", sans-serif;
   }
 
-  #bg-back {
-    position: fixed;
-    inset: 0;
-    background: url("sea_bg.png") center center / cover no-repeat;
-    z-index: 0;
-  }
-
   canvas {
     display: block;
     position: fixed;
     inset: 0;
-    z-index: 4;
-  }
-
-  #ocean-front {
-    position: fixed;
-    inset: 0;
-    z-index: 2;
-    pointer-events: none;
-    clip-path: inset(49% 0 0 0);
-    background:
-      linear-gradient(
-        to bottom,
-        rgba(255,255,255,0.06) 0%,
-        rgba(140,210,245,0.08) 20%,
-        rgba(55,125,190,0.10) 58%,
-        rgba(10,45,95,0.14) 100%
-      );
-    mix-blend-mode: screen;
-  }
-
-  #ocean-front::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: -2%;
-    height: 18%;
-    background:
-      linear-gradient(
-        to bottom,
-        rgba(255,255,255,0.14) 0%,
-        rgba(160,220,255,0.10) 28%,
-        rgba(60,130,190,0.06) 55%,
-        rgba(10,45,90,0.00) 100%
-      );
-    mix-blend-mode: screen;
-    filter: blur(8px);
-  }
-
-  #water-shimmer {
-    position: fixed;
-    left: 0;
-    right: 0;
-    top: 49%;
-    bottom: 0;
-    z-index: 3;
-    pointer-events: none;
-    background:
-      radial-gradient(ellipse at 20% 10%, rgba(255,255,255,0.18), rgba(255,255,255,0) 38%),
-      radial-gradient(ellipse at 70% 18%, rgba(255,255,255,0.10), rgba(255,255,255,0) 34%),
-      repeating-linear-gradient(
-        to bottom,
-        rgba(255,255,255,0.06) 0px,
-        rgba(255,255,255,0.02) 3px,
-        rgba(255,255,255,0.00) 8px,
-        rgba(0,0,0,0.00) 15px
-      );
-    opacity: 0.55;
-    mix-blend-mode: screen;
-    animation: shimmerMove 7s linear infinite;
-    filter: blur(1.5px);
-  }
-
-  @keyframes shimmerMove {
-    0%   { transform: translateY(0) scaleY(1); }
-    50%  { transform: translateY(8px) scaleY(1.02); }
-    100% { transform: translateY(0) scaleY(1); }
-  }
-
-  #ui {
-    position: fixed;
-    top: 14px;
-    left: 14px;
-    z-index: 20;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-
-  button {
-    border: none;
-    border-radius: 999px;
-    padding: 10px 16px;
-    font-size: 14px;
-    cursor: pointer;
-    background: rgba(255,255,255,0.88);
-    color: #06334a;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.24);
-  }
-
-  button:hover {
-    transform: translateY(-1px);
-  }
-
-  button:disabled {
-    opacity: 0.5;
-    cursor: default;
-    transform: none;
   }
 
   #status {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 50;
     color: #fff;
     font-size: 13px;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
-    background: rgba(0,0,0,0.28);
     padding: 8px 12px;
     border-radius: 999px;
+    background: rgba(0,0,0,0.35);
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    pointer-events: none;
+  }
+
+  #startOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(circle at center, rgba(10,30,50,0.35), rgba(0,0,0,0.72));
+    color: white;
+    text-align: center;
+    padding: 24px;
+    cursor: pointer;
+  }
+
+  #startOverlay.hidden {
+    display: none;
+  }
+
+  #startCard {
+    max-width: 520px;
+    padding: 22px 26px;
+    border-radius: 24px;
+    background: rgba(255,255,255,0.10);
+    box-shadow: 0 10px 36px rgba(0,0,0,0.30);
+    backdrop-filter: blur(8px);
+  }
+
+  #startCard h1 {
+    margin: 0 0 10px;
+    font-size: 24px;
+  }
+
+  #startCard p {
+    margin: 0;
+    line-height: 1.8;
+    font-size: 14px;
   }
 </style>
 
@@ -148,14 +86,16 @@
 </head>
 <body>
 
-<div id="bg-back"></div>
-<div id="ocean-front"></div>
-<div id="water-shimmer"></div>
+<div id="status">読み込み中…</div>
 
-<div id="ui">
-  <button id="startBtn">▶ 再生＋録画開始</button>
-  <button id="stopBtn" disabled>■ 停止して保存</button>
-  <div id="status">待機中…</div>
+<div id="startOverlay" class="hidden">
+  <div id="startCard">
+    <h1>🎵 クリックで自動開始</h1>
+    <p>
+      ブラウザの自動再生制限により、最初の1回だけクリックが必要な場合があります。<br>
+      クリック後は、音楽＋映像の録画が自動で始まり、曲の終了で自動保存されます。
+    </p>
+  </div>
 </div>
 
 <audio id="bgm" src="music.mp3" preload="auto" crossorigin="anonymous"></audio>
@@ -163,6 +103,11 @@
 <script type="module">
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+const RECORD_SECONDS = 210; // 3分30秒
+const statusEl = document.getElementById("status");
+const bgm = document.getElementById("bgm");
+const startOverlay = document.getElementById("startOverlay");
 
 const scene = new THREE.Scene();
 
@@ -176,19 +121,23 @@ camera.position.set(0, 2.7, 14);
 
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
-  alpha: true,
+  alpha: false,
   preserveDrawingBuffer: false
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setClearColor(0x000000, 0);
+renderer.setClearColor(0x000000, 1);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.enableRotate = false;
+controls.enableZoom = false;
+controls.enablePan = false;
 controls.target.set(0, -1.15, -6.2);
+
+const loader = new THREE.TextureLoader();
 
 /* ==========
    ライト
@@ -204,6 +153,82 @@ fillLight.position.set(-8, 5, -6);
 scene.add(fillLight);
 
 /* ==========
+   背景（録画に入るよう Three.js 内へ）
+========== */
+const bgGroup = new THREE.Group();
+scene.add(bgGroup);
+
+const seaBgTexture = loader.load("sea_bg.png");
+seaBgTexture.colorSpace = THREE.SRGBColorSpace;
+
+const bgPlane = new THREE.Mesh(
+  new THREE.PlaneGeometry(40, 22.5),
+  new THREE.MeshBasicMaterial({
+    map: seaBgTexture,
+    depthWrite: false
+  })
+);
+bgPlane.position.set(0, 1.2, -24);
+bgGroup.add(bgPlane);
+
+/* 海面の前景トーン */
+const frontOceanPlane = new THREE.Mesh(
+  new THREE.PlaneGeometry(40, 12),
+  new THREE.MeshBasicMaterial({
+    color: 0x4d95c8,
+    transparent: true,
+    opacity: 0.16,
+    depthWrite: false
+  })
+);
+frontOceanPlane.position.set(0, -4.4, -8);
+scene.add(frontOceanPlane);
+
+/* きらめき用テクスチャ */
+function makeShimmerTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext("2d");
+
+  const grad1 = ctx.createRadialGradient(120, 90, 10, 120, 90, 160);
+  grad1.addColorStop(0, "rgba(255,255,255,0.35)");
+  grad1.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = grad1;
+  ctx.fillRect(0, 0, 512, 512);
+
+  const grad2 = ctx.createRadialGradient(360, 120, 8, 360, 120, 130);
+  grad2.addColorStop(0, "rgba(255,255,255,0.18)");
+  grad2.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = grad2;
+  ctx.fillRect(0, 0, 512, 512);
+
+  for (let i = 0; i < 90; i++) {
+    const y = Math.random() * 512;
+    const h = 1 + Math.random() * 3;
+    const alpha = 0.02 + Math.random() * 0.05;
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+    ctx.fillRect(0, y, 512, h);
+  }
+
+  return new THREE.CanvasTexture(canvas);
+}
+
+const shimmerTexture = makeShimmerTexture();
+const shimmerPlane = new THREE.Mesh(
+  new THREE.PlaneGeometry(40, 10),
+  new THREE.MeshBasicMaterial({
+    map: shimmerTexture,
+    transparent: true,
+    opacity: 0.48,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending
+  })
+);
+shimmerPlane.position.set(0, -4.6, -7.4);
+scene.add(shimmerPlane);
+
+/* ==========
    ワールド
 ========== */
 const world = new THREE.Group();
@@ -217,9 +242,7 @@ const coralGroup = new THREE.Group();
 coralGroup.position.set(0, -3.42, 0.70);
 world.add(coralGroup);
 
-const textureLoader = new THREE.TextureLoader();
-
-const coralTexture = textureLoader.load("sango.png");
+const coralTexture = loader.load("sango.png");
 coralTexture.colorSpace = THREE.SRGBColorSpace;
 
 const coral = new THREE.Mesh(
@@ -391,7 +414,7 @@ const texSnow   = makeSnowTexture();
 const texSmoke  = makeSmokeTexture();
 
 /* ==========
-   均等配置
+   季節パーティクル
 ========== */
 const zoneConfigs = [
   { texture: texSakura, xMin: -15.80, xMax: -13.20, yMin: -3.30, yMax: 1.8, opacity: 0.95, scaleMin: 0.22, scaleMax: 0.34, speed: 0.010, kind: "sakura" },
@@ -524,7 +547,7 @@ function updateSmoke(t) {
    船
 ========== */
 function makeShip(filename, x, y, z, width, height, dir, speed) {
-  const tex = textureLoader.load(filename);
+  const tex = loader.load(filename);
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(width, height),
     new THREE.MeshBasicMaterial({
@@ -607,19 +630,16 @@ for (let i = 0; i < 16; i++) {
 /* ==========
    録画
 ========== */
-const bgm = document.getElementById("bgm");
-const startBtn = document.getElementById("startBtn");
-const stopBtn = document.getElementById("stopBtn");
-const statusEl = document.getElementById("status");
-
 let mediaRecorder = null;
 let recordedChunks = [];
 let isRecording = false;
 let audioCtx = null;
-let animationStartedAt = null;
+let started = false;
+let autoStopTimer = null;
 
-async function startRecording() {
-  if (isRecording) return;
+async function beginAutoRecording() {
+  if (started) return;
+  started = true;
 
   try {
     statusEl.textContent = "録画準備中…";
@@ -643,7 +663,6 @@ async function startRecording() {
     source.connect(audioCtx.destination);
 
     const mixedStream = new MediaStream();
-
     canvasStream.getVideoTracks().forEach(track => mixedStream.addTrack(track));
     destination.stream.getAudioTracks().forEach(track => mixedStream.addTrack(track));
 
@@ -663,7 +682,9 @@ async function startRecording() {
 
     mediaRecorder = new MediaRecorder(
       mixedStream,
-      selectedMimeType ? { mimeType: selectedMimeType, videoBitsPerSecond: 12000000 } : { videoBitsPerSecond: 12000000 }
+      selectedMimeType
+        ? { mimeType: selectedMimeType, videoBitsPerSecond: 12000000 }
+        : { videoBitsPerSecond: 12000000 }
     );
 
     recordedChunks = [];
@@ -679,34 +700,32 @@ async function startRecording() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "ocean_coral_music_recording.webm";
+      a.download = "ocean_coral_auto_record.webm";
       document.body.appendChild(a);
       a.click();
       a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
 
-      setTimeout(() => URL.revokeObjectURL(url), 3000);
-
-      startBtn.disabled = false;
-      stopBtn.disabled = true;
-      statusEl.textContent = "保存しました ✨";
+      statusEl.textContent = "自動保存しました ✨";
       isRecording = false;
     };
 
     mediaRecorder.start(200);
     await bgm.play();
 
-    animationStartedAt = performance.now();
-
     isRecording = true;
-    startBtn.disabled = true;
-    stopBtn.disabled = false;
-    statusEl.textContent = "録画中… 3:30の曲に合わせて保存されます 🎶";
+    statusEl.textContent = "録画中… 曲の終了で自動保存されます 🎵";
+
+    if (autoStopTimer) clearTimeout(autoStopTimer);
+    autoStopTimer = setTimeout(() => {
+      stopRecording();
+    }, RECORD_SECONDS * 1000);
+
   } catch (err) {
     console.error(err);
-    statusEl.textContent = "録画開始に失敗しました";
-    startBtn.disabled = false;
-    stopBtn.disabled = true;
-    isRecording = false;
+    started = false;
+    startOverlay.classList.remove("hidden");
+    statusEl.textContent = "クリックで開始してください";
   }
 }
 
@@ -718,7 +737,7 @@ function stopRecording() {
     if (mediaRecorder && mediaRecorder.state !== "inactive") {
       mediaRecorder.stop();
     }
-    statusEl.textContent = "録画停止中…";
+    statusEl.textContent = "保存中…";
   } catch (err) {
     console.error(err);
     statusEl.textContent = "停止時にエラーが発生しました";
@@ -726,13 +745,22 @@ function stopRecording() {
 }
 
 bgm.addEventListener("ended", () => {
-  if (isRecording) {
-    stopRecording();
-  }
+  if (isRecording) stopRecording();
 });
 
-startBtn.addEventListener("click", startRecording);
-stopBtn.addEventListener("click", stopRecording);
+startOverlay.addEventListener("click", async () => {
+  startOverlay.classList.add("hidden");
+  await beginAutoRecording();
+});
+
+/* ページ読み込み後に自動開始を試す */
+window.addEventListener("load", async () => {
+  try {
+    await beginAutoRecording();
+  } catch (e) {
+    console.error(e);
+  }
+});
 
 /* ==========
    アニメーション
@@ -750,6 +778,11 @@ function animate() {
 
   waterPlane.material.opacity = 0.08 + Math.sin(t * 1.5) * 0.015;
   waterGlow.material.opacity = 0.04 + Math.sin(t * 2.2) * 0.012;
+
+  shimmerPlane.material.opacity = 0.36 + Math.sin(t * 1.6) * 0.12;
+  shimmerPlane.position.y = -4.6 + Math.sin(t * 0.7) * 0.06;
+  shimmerTexture.offset.y -= 0.0009;
+  shimmerTexture.needsUpdate = true;
 
   sparkleGroup.children.forEach((p, i) => {
     p.position.y = p.userData.baseY + Math.sin(t * 1.7 + p.userData.phase) * 0.025;
