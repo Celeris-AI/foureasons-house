@@ -161,15 +161,52 @@ scene.add(bgGroup);
 const seaBgTexture = loader.load("sea_bg.png");
 seaBgTexture.colorSpace = THREE.SRGBColorSpace;
 
+const seaBgTexture = loader.load("sea_bg.png");
+seaBgTexture.colorSpace = THREE.SRGBColorSpace;
+
+const bgMaterial = new THREE.MeshBasicMaterial({
+  map: seaBgTexture,
+  depthWrite: false
+});
+
 const bgPlane = new THREE.Mesh(
-  new THREE.PlaneGeometry(40, 22.5),
-  new THREE.MeshBasicMaterial({
-    map: seaBgTexture,
-    depthWrite: false
-  })
+  new THREE.PlaneGeometry(1, 1),
+  bgMaterial
 );
 bgPlane.position.set(0, 1.2, -24);
 bgGroup.add(bgPlane);
+
+function fitBackgroundToView() {
+  const distance = Math.abs(camera.position.z - bgPlane.position.z);
+  const vFov = THREE.MathUtils.degToRad(camera.fov);
+
+  const viewHeight = 2 * Math.tan(vFov / 2) * distance;
+  const viewWidth = viewHeight * camera.aspect;
+
+  const imageAspect = seaBgTexture.image
+    ? seaBgTexture.image.width / seaBgTexture.image.height
+    : 16 / 9;
+
+  const viewAspect = viewWidth / viewHeight;
+
+  let planeWidth, planeHeight;
+
+  if (viewAspect > imageAspect) {
+    planeWidth = viewWidth;
+    planeHeight = planeWidth / imageAspect;
+  } else {
+    planeHeight = viewHeight;
+    planeWidth = planeHeight * imageAspect;
+  }
+
+  bgPlane.scale.set(planeWidth, planeHeight, 1);
+}
+
+seaBgTexture.onUpdate = () => {
+  fitBackgroundToView();
+};
+
+seaBgTexture.image && fitBackgroundToView();
 
 /* 海面の前景トーン */
 const frontOceanPlane = new THREE.Mesh(
