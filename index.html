@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Magic Circle Triple Colors + Sky Canopy</title>
+<title>Magic Circle Triple Colors + Sky Canopy + Mystic BGM</title>
 
 <style>
   html, body {
@@ -94,12 +94,10 @@
     <p>
       左はゴールド、中央はサファイアブルー、右はルビーレッドの三重魔法陣。<br>
       さらに上空には、三つを束ねる巨大な天蓋魔法陣が展開されています。<br>
-      クリックすると、音楽つき録画が始まり、3分30秒後に自動保存されます。
+      クリックすると、神秘BGMつき録画が始まり、3分30秒後に自動保存されます。
     </p>
   </div>
 </div>
-
-<audio id="bgm" src="music.mp3" preload="auto" crossorigin="anonymous"></audio>
 
 <script type="module">
 import * as THREE from "three";
@@ -108,7 +106,6 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 const RECORD_SECONDS = 210;
 const statusEl = document.getElementById("status");
 const startOverlay = document.getElementById("startOverlay");
-const bgm = document.getElementById("bgm");
 
 const scene = new THREE.Scene();
 
@@ -682,9 +679,6 @@ altarSets.push(
   })
 );
 
-/* -------------------------
-   上空巨大魔法陣（天蓋術式）
-------------------------- */
 const skyTemple = new THREE.Group();
 skyTemple.position.set(0, 5.9, -0.7);
 world.add(skyTemple);
@@ -897,9 +891,6 @@ skyMist.position.set(0, 0.4, -0.8);
 skyMist.rotation.x = -0.32;
 skyTemple.add(skyMist);
 
-/* -------------------------
-   汎用キラキラ
-------------------------- */
 const sparkleGroup = new THREE.Group();
 world.add(sparkleGroup);
 
@@ -974,36 +965,294 @@ function updateSmoke(t) {
 }
 
 let audioCtx = null;
-let audioSourceNode = null;
+let audioMaster = null;
+let audioDestination = null;
 let mediaRecorder = null;
 let recordedChunks = [];
 let isRecording = false;
 let autoStopTimer = null;
+let bgmStarted = false;
+let audioNodes = null;
+let lastMagicTrigger = -999;
+
+function createNoiseBuffer(ctx, duration = 2.0) {
+  const bufferSize = Math.floor(ctx.sampleRate * duration);
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = (Math.random() * 2 - 1) * 0.45;
+  }
+  return buffer;
+}
+
+function makeImpulseResponse(ctx, seconds = 2.8, decay = 2.4) {
+  const length = Math.floor(ctx.sampleRate * seconds);
+  const impulse = ctx.createBuffer(2, length, ctx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const channel = impulse.getChannelData(ch);
+    for (let i = 0; i < length; i++) {
+      const n = Math.random() * 2 - 1;
+      channel[i] = n * Math.pow(1 - i / length, decay);
+    }
+  }
+  return impulse;
+}
+
+function initAudioSystem() {
+  if (audioCtx) return;
+
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  audioMaster = audioCtx.createGain();
+  audioMaster.gain.value = 0.72;
+
+  audioDestination = audioCtx.createMediaStreamDestination();
+
+  const limiter = audioCtx.createDynamicsCompressor();
+  limiter.threshold.value = -18;
+  limiter.knee.value = 8;
+  limiter.ratio.value = 10;
+  limiter.attack.value = 0.003;
+  limiter.release.value = 0.25;
+
+  audioMaster.connect(limiter);
+  limiter.connect(audioCtx.destination);
+  limiter.connect(audioDestination);
+
+  const noiseBuffer = createNoiseBuffer(audioCtx, 2.2);
+  const reverb = audioCtx.createConvolver();
+  reverb.buffer = makeImpulseResponse(audioCtx, 3.5, 2.7);
+
+  const reverbSend = audioCtx.createGain();
+  reverbSend.gain.value = 0.26;
+  reverbSend.connect(reverb);
+  reverb.connect(audioMaster);
+
+  const bgmBus = audioCtx.createGain();
+  bgmBus.gain.value = 0.34;
+  bgmBus.connect(audioMaster);
+  bgmBus.connect(reverbSend);
+
+  const fxBus = audioCtx.createGain();
+  fxBus.gain.value = 0.85;
+  fxBus.connect(audioMaster);
+  fxBus.connect(reverbSend);
+
+  const drone = audioCtx.createOscillator();
+  drone.type = "sine";
+  drone.frequency.value = 82.4;
+
+  const droneGain = audioCtx.createGain();
+  droneGain.gain.value = 0.0001;
+
+  const droneFilter = audioCtx.createBiquadFilter();
+  droneFilter.type = "lowpass";
+  droneFilter.frequency.value = 280;
+  droneFilter.Q.value = 0.7;
+
+  drone.connect(droneFilter);
+  droneFilter.connect(droneGain);
+  droneGain.connect(bgmBus);
+
+  const drone2 = audioCtx.createOscillator();
+  drone2.type = "triangle";
+  drone2.frequency.value = 123.47;
+
+  const drone2Gain = audioCtx.createGain();
+  drone2Gain.gain.value = 0.0001;
+
+  const drone2Filter = audioCtx.createBiquadFilter();
+  drone2Filter.type = "lowpass";
+  drone2Filter.frequency.value = 420;
+  drone2Filter.Q.value = 0.8;
+
+  drone2.connect(drone2Filter);
+  drone2Filter.connect(drone2Gain);
+  drone2Gain.connect(bgmBus);
+
+  const shimmerLFO = audioCtx.createOscillator();
+  shimmerLFO.type = "sine";
+  shimmerLFO.frequency.value = 0.11;
+  const shimmerDepth = audioCtx.createGain();
+  shimmerDepth.gain.value = 22;
+  shimmerLFO.connect(shimmerDepth);
+  shimmerDepth.connect(drone2.frequency);
+
+  const airNoise = audioCtx.createBufferSource();
+  airNoise.buffer = noiseBuffer;
+  airNoise.loop = true;
+
+  const airFilter = audioCtx.createBiquadFilter();
+  airFilter.type = "bandpass";
+  airFilter.frequency.value = 1700;
+  airFilter.Q.value = 0.35;
+
+  const airGain = audioCtx.createGain();
+  airGain.gain.value = 0.0001;
+
+  airNoise.connect(airFilter);
+  airFilter.connect(airGain);
+  airGain.connect(bgmBus);
+
+  const pulseLFO = audioCtx.createOscillator();
+  pulseLFO.type = "sine";
+  pulseLFO.frequency.value = 0.07;
+  const pulseDepth = audioCtx.createGain();
+  pulseDepth.gain.value = 0.012;
+  pulseLFO.connect(pulseDepth);
+  pulseDepth.connect(droneGain.gain);
+
+  const pulseDepth2 = audioCtx.createGain();
+  pulseDepth2.gain.value = 0.008;
+  pulseLFO.connect(pulseDepth2);
+  pulseDepth2.connect(drone2Gain.gain);
+
+  audioNodes = {
+    reverbSend,
+    bgmBus,
+    fxBus,
+    drone,
+    droneGain,
+    drone2,
+    drone2Gain,
+    shimmerLFO,
+    airNoise,
+    airGain,
+    pulseLFO
+  };
+
+  drone.start();
+  drone2.start();
+  shimmerLFO.start();
+  airNoise.start();
+  pulseLFO.start();
+}
+
+function startMysticBGM() {
+  if (!audioNodes || bgmStarted) return;
+  const now = audioCtx.currentTime;
+  audioNodes.droneGain.gain.cancelScheduledValues(now);
+  audioNodes.drone2Gain.gain.cancelScheduledValues(now);
+  audioNodes.airGain.gain.cancelScheduledValues(now);
+
+  audioNodes.droneGain.gain.setValueAtTime(0.0001, now);
+  audioNodes.droneGain.gain.exponentialRampToValueAtTime(0.040, now + 4.0);
+
+  audioNodes.drone2Gain.gain.setValueAtTime(0.0001, now);
+  audioNodes.drone2Gain.gain.exponentialRampToValueAtTime(0.024, now + 5.0);
+
+  audioNodes.airGain.gain.setValueAtTime(0.0001, now);
+  audioNodes.airGain.gain.exponentialRampToValueAtTime(0.010, now + 6.5);
+
+  bgmStarted = true;
+}
+
+function stopMysticBGM() {
+  if (!audioNodes) return;
+  const now = audioCtx.currentTime;
+  audioNodes.droneGain.gain.cancelScheduledValues(now);
+  audioNodes.drone2Gain.gain.cancelScheduledValues(now);
+  audioNodes.airGain.gain.cancelScheduledValues(now);
+
+  audioNodes.droneGain.gain.setValueAtTime(Math.max(audioNodes.droneGain.gain.value, 0.0001), now);
+  audioNodes.droneGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
+
+  audioNodes.drone2Gain.gain.setValueAtTime(Math.max(audioNodes.drone2Gain.gain.value, 0.0001), now);
+  audioNodes.drone2Gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
+
+  audioNodes.airGain.gain.setValueAtTime(Math.max(audioNodes.airGain.gain.value, 0.0001), now);
+  audioNodes.airGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
+
+  bgmStarted = false;
+}
+
+function playMagicSE(intensity = 1, color = "blue") {
+  if (!audioCtx || !audioNodes) return;
+
+  const now = audioCtx.currentTime;
+  const colorMap = {
+    gold: { base: 392, top: 1174, noise: 2200 },
+    blue: { base: 329.63, top: 1318.5, noise: 2600 },
+    red:  { base: 293.66, top: 1046.5, noise: 2000 },
+    sky:  { base: 440, top: 1567.98, noise: 3000 }
+  };
+  const tone = colorMap[color] || colorMap.blue;
+
+  const osc1 = audioCtx.createOscillator();
+  osc1.type = "triangle";
+  osc1.frequency.setValueAtTime(tone.base, now);
+  osc1.frequency.exponentialRampToValueAtTime(tone.top, now + 0.9 * intensity);
+
+  const osc2 = audioCtx.createOscillator();
+  osc2.type = "sine";
+  osc2.frequency.setValueAtTime(tone.base * 0.5, now);
+  osc2.frequency.exponentialRampToValueAtTime(tone.base * 1.5, now + 1.1 * intensity);
+
+  const gain1 = audioCtx.createGain();
+  gain1.gain.setValueAtTime(0.0001, now);
+  gain1.gain.exponentialRampToValueAtTime(0.040 * intensity, now + 0.04);
+  gain1.gain.exponentialRampToValueAtTime(0.0001, now + 1.45 * intensity);
+
+  const gain2 = audioCtx.createGain();
+  gain2.gain.setValueAtTime(0.0001, now);
+  gain2.gain.exponentialRampToValueAtTime(0.022 * intensity, now + 0.07);
+  gain2.gain.exponentialRampToValueAtTime(0.0001, now + 1.6 * intensity);
+
+  const filter1 = audioCtx.createBiquadFilter();
+  filter1.type = "bandpass";
+  filter1.frequency.value = tone.top * 0.7;
+  filter1.Q.value = 2.4;
+
+  osc1.connect(filter1);
+  filter1.connect(gain1);
+  gain1.connect(audioNodes.fxBus);
+
+  osc2.connect(gain2);
+  gain2.connect(audioNodes.fxBus);
+
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = createNoiseBuffer(audioCtx, 0.8);
+
+  const noiseFilter = audioCtx.createBiquadFilter();
+  noiseFilter.type = "bandpass";
+  noiseFilter.frequency.value = tone.noise;
+  noiseFilter.Q.value = 0.9;
+
+  const noiseGain = audioCtx.createGain();
+  noiseGain.gain.setValueAtTime(0.0001, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.015 * intensity, now + 0.02);
+  noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.65 * intensity);
+
+  noise.connect(noiseFilter);
+  noiseFilter.connect(noiseGain);
+  noiseGain.connect(audioNodes.fxBus);
+
+  osc1.start(now);
+  osc2.start(now);
+  noise.start(now);
+
+  osc1.stop(now + 1.55 * intensity);
+  osc2.stop(now + 1.75 * intensity);
+  noise.stop(now + 0.72 * intensity);
+}
 
 async function startAll() {
   try {
     statusEl.textContent = "録画準備中…";
 
-    if (!audioCtx) {
-      audioCtx = new AudioContext();
-    }
+    initAudioSystem();
+
     if (audioCtx.state === "suspended") {
       await audioCtx.resume();
     }
 
-    if (!audioSourceNode) {
-      audioSourceNode = audioCtx.createMediaElementSource(bgm);
-    }
-
-    const destination = audioCtx.createMediaStreamDestination();
-    audioSourceNode.connect(destination);
-    audioSourceNode.connect(audioCtx.destination);
+    startMysticBGM();
+    playMagicSE(1.1, "sky");
 
     const canvasStream = renderer.domElement.captureStream(60);
     const mixedStream = new MediaStream();
 
     canvasStream.getVideoTracks().forEach(track => mixedStream.addTrack(track));
-    destination.stream.getAudioTracks().forEach(track => mixedStream.addTrack(track));
+    audioDestination.stream.getAudioTracks().forEach(track => mixedStream.addTrack(track));
 
     let mimeType = "";
     const mimeTypes = [
@@ -1038,7 +1287,7 @@ async function startAll() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "magic_circle_triple_colors_sky_canopy.webm";
+      a.download = "magic_circle_triple_colors_sky_canopy_mystic_bgm.webm";
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -1048,12 +1297,7 @@ async function startAll() {
       isRecording = false;
     };
 
-    bgm.currentTime = 0;
-    bgm.loop = false;
-    bgm.volume = 1.0;
-
     mediaRecorder.start(200);
-    await bgm.play();
 
     isRecording = true;
     statusEl.textContent = "録画中… 3分30秒後に自動保存されます 🎵";
@@ -1064,7 +1308,7 @@ async function startAll() {
 
   } catch (err) {
     console.error(err);
-    statusEl.textContent = "開始に失敗しました。music.mp3 やブラウザ設定を確認してください";
+    statusEl.textContent = "開始に失敗しました。ブラウザ設定を確認してください";
     startOverlay.classList.remove("hidden");
   }
 }
@@ -1072,10 +1316,13 @@ async function startAll() {
 function stopAll() {
   if (!isRecording) return;
 
-  bgm.pause();
+  stopMysticBGM();
+  playMagicSE(0.9, "sky");
 
   if (mediaRecorder && mediaRecorder.state !== "inactive") {
-    mediaRecorder.stop();
+    setTimeout(() => {
+      mediaRecorder.stop();
+    }, 1300);
   }
 
   if (autoStopTimer) {
@@ -1085,10 +1332,6 @@ function stopAll() {
 
   statusEl.textContent = "保存中…";
 }
-
-bgm.addEventListener("ended", () => {
-  if (isRecording) stopAll();
-});
 
 startOverlay.addEventListener("click", async () => {
   startOverlay.classList.add("hidden");
@@ -1157,7 +1400,6 @@ function animate() {
     set.light.intensity = 1.95 + Math.sin(tt * 2.0 + setIndex) * 0.35;
   });
 
-  // 上空巨大魔法陣のアニメーション
   skyMagicMain.rotation.z = t * 0.045;
   skyMagicInner.rotation.z = -t * 0.075;
   skyMagicCore.rotation.z = t * 0.11;
@@ -1206,6 +1448,30 @@ function animate() {
   });
 
   frontMist.material.opacity = 0.035 + Math.sin(t * 0.8) * 0.018;
+
+  if (audioCtx && isRecording) {
+    const wave = Math.sin(t * 0.45);
+    const wave2 = Math.sin(t * 0.31 + 1.2);
+
+    if (audioNodes) {
+      const now = audioCtx.currentTime;
+      audioNodes.drone.frequency.setTargetAtTime(82.4 + wave * 2.2, now, 0.5);
+      audioNodes.drone2.frequency.setTargetAtTime(123.47 + wave2 * 3.6, now, 0.65);
+    }
+
+    const beat = Math.sin(t * 0.72) + Math.sin(t * 1.11 + 0.8);
+    if (beat > 1.72 && t - lastMagicTrigger > 5.5) {
+      lastMagicTrigger = t;
+      const sequence = ["gold", "blue", "red"];
+      const color = sequence[Math.floor((t / 5.5)) % sequence.length];
+      playMagicSE(0.8, color);
+    }
+
+    if (Math.sin(t * 0.22 + 0.8) > 0.998 && t - lastMagicTrigger > 2.5) {
+      lastMagicTrigger = t;
+      playMagicSE(1.15, "sky");
+    }
+  }
 
   controls.update();
   renderer.render(scene, camera);
