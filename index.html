@@ -974,6 +974,7 @@ let autoStopTimer = null;
 let bgmStarted = false;
 let audioNodes = null;
 let lastMagicTrigger = -999;
+let lastBellTime = -999;
 
 function createNoiseBuffer(ctx, duration = 2.0) {
   const bufferSize = Math.floor(ctx.sampleRate * duration);
@@ -1003,7 +1004,7 @@ function initAudioSystem() {
 
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   audioMaster = audioCtx.createGain();
-  audioMaster.gain.value = 0.72;
+  audioMaster.gain.value = 0.82;
 
   audioDestination = audioCtx.createMediaStreamDestination();
 
@@ -1018,22 +1019,22 @@ function initAudioSystem() {
   limiter.connect(audioCtx.destination);
   limiter.connect(audioDestination);
 
-  const noiseBuffer = createNoiseBuffer(audioCtx, 2.2);
+  const noiseBuffer = createNoiseBuffer(audioCtx, 2.6);
   const reverb = audioCtx.createConvolver();
-  reverb.buffer = makeImpulseResponse(audioCtx, 3.5, 2.7);
+  reverb.buffer = makeImpulseResponse(audioCtx, 4.5, 2.9);
 
   const reverbSend = audioCtx.createGain();
-  reverbSend.gain.value = 0.26;
+  reverbSend.gain.value = 0.34;
   reverbSend.connect(reverb);
   reverb.connect(audioMaster);
 
   const bgmBus = audioCtx.createGain();
-  bgmBus.gain.value = 0.34;
+  bgmBus.gain.value = 0.42;
   bgmBus.connect(audioMaster);
   bgmBus.connect(reverbSend);
 
   const fxBus = audioCtx.createGain();
-  fxBus.gain.value = 0.85;
+  fxBus.gain.value = 0.92;
   fxBus.connect(audioMaster);
   fxBus.connect(reverbSend);
 
@@ -1062,12 +1063,28 @@ function initAudioSystem() {
 
   const drone2Filter = audioCtx.createBiquadFilter();
   drone2Filter.type = "lowpass";
-  drone2Filter.frequency.value = 420;
+  drone2Filter.frequency.value = 460;
   drone2Filter.Q.value = 0.8;
 
   drone2.connect(drone2Filter);
   drone2Filter.connect(drone2Gain);
   drone2Gain.connect(bgmBus);
+
+  const drone3 = audioCtx.createOscillator();
+  drone3.type = "sine";
+  drone3.frequency.value = 164.81;
+
+  const drone3Gain = audioCtx.createGain();
+  drone3Gain.gain.value = 0.0001;
+
+  const drone3Filter = audioCtx.createBiquadFilter();
+  drone3Filter.type = "lowpass";
+  drone3Filter.frequency.value = 680;
+  drone3Filter.Q.value = 0.7;
+
+  drone3.connect(drone3Filter);
+  drone3Filter.connect(drone3Gain);
+  drone3Gain.connect(bgmBus);
 
   const shimmerLFO = audioCtx.createOscillator();
   shimmerLFO.type = "sine";
@@ -1076,6 +1093,14 @@ function initAudioSystem() {
   shimmerDepth.gain.value = 22;
   shimmerLFO.connect(shimmerDepth);
   shimmerDepth.connect(drone2.frequency);
+
+  const shimmerLFO2 = audioCtx.createOscillator();
+  shimmerLFO2.type = "sine";
+  shimmerLFO2.frequency.value = 0.043;
+  const shimmerDepth2 = audioCtx.createGain();
+  shimmerDepth2.gain.value = 9;
+  shimmerLFO2.connect(shimmerDepth2);
+  shimmerDepth2.connect(drone3.frequency);
 
   const airNoise = audioCtx.createBufferSource();
   airNoise.buffer = noiseBuffer;
@@ -1093,6 +1118,22 @@ function initAudioSystem() {
   airFilter.connect(airGain);
   airGain.connect(bgmBus);
 
+  const sparkleNoise = audioCtx.createBufferSource();
+  sparkleNoise.buffer = noiseBuffer;
+  sparkleNoise.loop = true;
+
+  const sparkleFilter = audioCtx.createBiquadFilter();
+  sparkleFilter.type = "bandpass";
+  sparkleFilter.frequency.value = 3600;
+  sparkleFilter.Q.value = 2.2;
+
+  const sparkleGain = audioCtx.createGain();
+  sparkleGain.gain.value = 0.0001;
+
+  sparkleNoise.connect(sparkleFilter);
+  sparkleFilter.connect(sparkleGain);
+  sparkleGain.connect(bgmBus);
+
   const pulseLFO = audioCtx.createOscillator();
   pulseLFO.type = "sine";
   pulseLFO.frequency.value = 0.07;
@@ -1106,6 +1147,11 @@ function initAudioSystem() {
   pulseLFO.connect(pulseDepth2);
   pulseDepth2.connect(drone2Gain.gain);
 
+  const pulseDepth3 = audioCtx.createGain();
+  pulseDepth3.gain.value = 0.005;
+  pulseLFO.connect(pulseDepth3);
+  pulseDepth3.connect(drone3Gain.gain);
+
   audioNodes = {
     reverbSend,
     bgmBus,
@@ -1114,16 +1160,24 @@ function initAudioSystem() {
     droneGain,
     drone2,
     drone2Gain,
+    drone3,
+    drone3Gain,
     shimmerLFO,
+    shimmerLFO2,
     airNoise,
     airGain,
+    sparkleNoise,
+    sparkleGain,
     pulseLFO
   };
 
   drone.start();
   drone2.start();
+  drone3.start();
   shimmerLFO.start();
+  shimmerLFO2.start();
   airNoise.start();
+  sparkleNoise.start();
   pulseLFO.start();
 }
 
@@ -1132,16 +1186,24 @@ function startMysticBGM() {
   const now = audioCtx.currentTime;
   audioNodes.droneGain.gain.cancelScheduledValues(now);
   audioNodes.drone2Gain.gain.cancelScheduledValues(now);
+  audioNodes.drone3Gain.gain.cancelScheduledValues(now);
   audioNodes.airGain.gain.cancelScheduledValues(now);
+  audioNodes.sparkleGain.gain.cancelScheduledValues(now);
 
   audioNodes.droneGain.gain.setValueAtTime(0.0001, now);
-  audioNodes.droneGain.gain.exponentialRampToValueAtTime(0.040, now + 4.0);
+  audioNodes.droneGain.gain.exponentialRampToValueAtTime(0.045, now + 4.0);
 
   audioNodes.drone2Gain.gain.setValueAtTime(0.0001, now);
-  audioNodes.drone2Gain.gain.exponentialRampToValueAtTime(0.024, now + 5.0);
+  audioNodes.drone2Gain.gain.exponentialRampToValueAtTime(0.028, now + 5.0);
+
+  audioNodes.drone3Gain.gain.setValueAtTime(0.0001, now);
+  audioNodes.drone3Gain.gain.exponentialRampToValueAtTime(0.014, now + 6.0);
 
   audioNodes.airGain.gain.setValueAtTime(0.0001, now);
-  audioNodes.airGain.gain.exponentialRampToValueAtTime(0.010, now + 6.5);
+  audioNodes.airGain.gain.exponentialRampToValueAtTime(0.013, now + 6.5);
+
+  audioNodes.sparkleGain.gain.setValueAtTime(0.0001, now);
+  audioNodes.sparkleGain.gain.exponentialRampToValueAtTime(0.006, now + 7.5);
 
   bgmStarted = true;
 }
@@ -1149,19 +1211,11 @@ function startMysticBGM() {
 function stopMysticBGM() {
   if (!audioNodes) return;
   const now = audioCtx.currentTime;
-  audioNodes.droneGain.gain.cancelScheduledValues(now);
-  audioNodes.drone2Gain.gain.cancelScheduledValues(now);
-  audioNodes.airGain.gain.cancelScheduledValues(now);
-
-  audioNodes.droneGain.gain.setValueAtTime(Math.max(audioNodes.droneGain.gain.value, 0.0001), now);
-  audioNodes.droneGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
-
-  audioNodes.drone2Gain.gain.setValueAtTime(Math.max(audioNodes.drone2Gain.gain.value, 0.0001), now);
-  audioNodes.drone2Gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
-
-  audioNodes.airGain.gain.setValueAtTime(Math.max(audioNodes.airGain.gain.value, 0.0001), now);
-  audioNodes.airGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
-
+  for (const g of [audioNodes.droneGain.gain, audioNodes.drone2Gain.gain, audioNodes.drone3Gain.gain, audioNodes.airGain.gain, audioNodes.sparkleGain.gain]) {
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(Math.max(g.value, 0.0001), now);
+    g.exponentialRampToValueAtTime(0.0001, now + 1.8);
+  }
   bgmStarted = false;
 }
 
@@ -1233,6 +1287,41 @@ function playMagicSE(intensity = 1, color = "blue") {
   osc1.stop(now + 1.55 * intensity);
   osc2.stop(now + 1.75 * intensity);
   noise.stop(now + 0.72 * intensity);
+}
+
+function playCelestialBell(kind = "blue", volume = 0.42) {
+  if (!audioCtx || !audioNodes) return;
+
+  const now = audioCtx.currentTime;
+  const noteMap = {
+    gold: [783.99, 1174.66, 1567.98],
+    blue: [659.25, 987.77, 1318.51],
+    red:  [587.33, 880.00, 1174.66],
+    sky:  [880.00, 1318.51, 1760.00]
+  };
+  const notes = noteMap[kind] || noteMap.blue;
+
+  notes.forEach((freq, idx) => {
+    const osc = audioCtx.createOscillator();
+    osc.type = idx === 0 ? "sine" : "triangle";
+    osc.frequency.setValueAtTime(freq, now + idx * 0.02);
+
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.0001, now + idx * 0.02);
+    gain.gain.exponentialRampToValueAtTime(volume / (idx + 1) * 0.03, now + idx * 0.03 + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.8 + idx * 0.08);
+
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = "highpass";
+    filter.frequency.value = 420;
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioNodes.fxBus);
+
+    osc.start(now + idx * 0.02);
+    osc.stop(now + 2.9 + idx * 0.1);
+  });
 }
 
 async function startAll() {
@@ -1452,11 +1541,18 @@ function animate() {
   if (audioCtx && isRecording) {
     const wave = Math.sin(t * 0.45);
     const wave2 = Math.sin(t * 0.31 + 1.2);
+    const wave3 = Math.sin(t * 0.19 + 2.4);
 
     if (audioNodes) {
       const now = audioCtx.currentTime;
       audioNodes.drone.frequency.setTargetAtTime(82.4 + wave * 2.2, now, 0.5);
       audioNodes.drone2.frequency.setTargetAtTime(123.47 + wave2 * 3.6, now, 0.65);
+      audioNodes.drone3.frequency.setTargetAtTime(164.81 + wave3 * 2.0, now, 0.8);
+
+      const sparkleAmt = 0.004 + (Math.sin(t * 0.8) + 1) * 0.0018;
+      audioNodes.sparkleGain.gain.setTargetAtTime(sparkleAmt, now, 0.9);
+      const airAmt = 0.010 + (Math.sin(t * 0.33 + 0.4) + 1) * 0.002;
+      audioNodes.airGain.gain.setTargetAtTime(airAmt, now, 1.2);
     }
 
     const beat = Math.sin(t * 0.72) + Math.sin(t * 1.11 + 0.8);
@@ -1465,6 +1561,13 @@ function animate() {
       const sequence = ["gold", "blue", "red"];
       const color = sequence[Math.floor((t / 5.5)) % sequence.length];
       playMagicSE(0.8, color);
+    }
+
+    if (t - lastBellTime > 8.5) {
+      lastBellTime = t;
+      const bellSequence = ["blue", "gold", "red", "sky"];
+      const kind = bellSequence[Math.floor(t / 8.5) % bellSequence.length];
+      playCelestialBell(kind, 0.42);
     }
 
     if (Math.sin(t * 0.22 + 0.8) > 0.998 && t - lastMagicTrigger > 2.5) {
