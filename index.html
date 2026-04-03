@@ -975,6 +975,57 @@ let bgmStarted = false;
 let audioNodes = null;
 let lastMagicTrigger = -999;
 let lastBellTime = -999;
+let musicSchedulerId = null;
+let currentSectionIndex = 0;
+let nextChordTime = 0;
+
+const BGM_SECTIONS = [
+  {
+    name: "awakening",
+    bars: 8,
+    chordDur: 4.0,
+    root: 220.00,
+    chords: [
+      [1.0, 1.25, 1.5],
+      [0.75, 1.0, 1.5],
+      [0.6667, 1.0, 1.3333],
+      [0.75, 1.125, 1.5]
+    ],
+    colorCycle: ["blue", "gold", "blue", "sky"],
+    arpDensity: 0.58,
+    bellEvery: 2
+  },
+  {
+    name: "ascension",
+    bars: 10,
+    chordDur: 4.0,
+    root: 246.94,
+    chords: [
+      [1.0, 1.2, 1.5],
+      [0.8, 1.0, 1.3333],
+      [0.6667, 1.0, 1.25],
+      [0.75, 1.125, 1.5]
+    ],
+    colorCycle: ["gold", "blue", "red", "sky"],
+    arpDensity: 0.72,
+    bellEvery: 2
+  },
+  {
+    name: "throne",
+    bars: 12,
+    chordDur: 4.0,
+    root: 196.00,
+    chords: [
+      [1.0, 1.3333, 1.5],
+      [0.75, 1.0, 1.25],
+      [0.6667, 1.0, 1.5],
+      [0.5, 0.75, 1.125]
+    ],
+    colorCycle: ["red", "gold", "blue", "sky"],
+    arpDensity: 0.82,
+    bellEvery: 1
+  }
+];
 
 function createNoiseBuffer(ctx, duration = 2.0) {
   const bufferSize = Math.floor(ctx.sampleRate * duration);
@@ -999,12 +1050,25 @@ function makeImpulseResponse(ctx, seconds = 2.8, decay = 2.4) {
   return impulse;
 }
 
+function sectionAtTime(elapsedSec) {
+  const total = BGM_SECTIONS.reduce((sum, sec) => sum + sec.bars * sec.chordDur, 0);
+  let wrapped = elapsedSec % total;
+  for (let i = 0; i < BGM_SECTIONS.length; i++) {
+    const secLen = BGM_SECTIONS[i].bars * BGM_SECTIONS[i].chordDur;
+    if (wrapped < secLen) {
+      return { section: BGM_SECTIONS[i], sectionIndex: i, localTime: wrapped };
+    }
+    wrapped -= secLen;
+  }
+  return { section: BGM_SECTIONS[0], sectionIndex: 0, localTime: 0 };
+}
+
 function initAudioSystem() {
   if (audioCtx) return;
 
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   audioMaster = audioCtx.createGain();
-  audioMaster.gain.value = 0.82;
+  audioMaster.gain.value = 0.86;
 
   audioDestination = audioCtx.createMediaStreamDestination();
 
@@ -1019,17 +1083,17 @@ function initAudioSystem() {
   limiter.connect(audioCtx.destination);
   limiter.connect(audioDestination);
 
-  const noiseBuffer = createNoiseBuffer(audioCtx, 2.6);
+  const noiseBuffer = createNoiseBuffer(audioCtx, 3.0);
   const reverb = audioCtx.createConvolver();
-  reverb.buffer = makeImpulseResponse(audioCtx, 4.5, 2.9);
+  reverb.buffer = makeImpulseResponse(audioCtx, 5.5, 3.0);
 
   const reverbSend = audioCtx.createGain();
-  reverbSend.gain.value = 0.34;
+  reverbSend.gain.value = 0.36;
   reverbSend.connect(reverb);
   reverb.connect(audioMaster);
 
   const bgmBus = audioCtx.createGain();
-  bgmBus.gain.value = 0.42;
+  bgmBus.gain.value = 0.45;
   bgmBus.connect(audioMaster);
   bgmBus.connect(reverbSend);
 
@@ -1041,15 +1105,12 @@ function initAudioSystem() {
   const drone = audioCtx.createOscillator();
   drone.type = "sine";
   drone.frequency.value = 82.4;
-
   const droneGain = audioCtx.createGain();
   droneGain.gain.value = 0.0001;
-
   const droneFilter = audioCtx.createBiquadFilter();
   droneFilter.type = "lowpass";
   droneFilter.frequency.value = 280;
   droneFilter.Q.value = 0.7;
-
   drone.connect(droneFilter);
   droneFilter.connect(droneGain);
   droneGain.connect(bgmBus);
@@ -1057,15 +1118,12 @@ function initAudioSystem() {
   const drone2 = audioCtx.createOscillator();
   drone2.type = "triangle";
   drone2.frequency.value = 123.47;
-
   const drone2Gain = audioCtx.createGain();
   drone2Gain.gain.value = 0.0001;
-
   const drone2Filter = audioCtx.createBiquadFilter();
   drone2Filter.type = "lowpass";
   drone2Filter.frequency.value = 460;
   drone2Filter.Q.value = 0.8;
-
   drone2.connect(drone2Filter);
   drone2Filter.connect(drone2Gain);
   drone2Gain.connect(bgmBus);
@@ -1073,15 +1131,12 @@ function initAudioSystem() {
   const drone3 = audioCtx.createOscillator();
   drone3.type = "sine";
   drone3.frequency.value = 164.81;
-
   const drone3Gain = audioCtx.createGain();
   drone3Gain.gain.value = 0.0001;
-
   const drone3Filter = audioCtx.createBiquadFilter();
   drone3Filter.type = "lowpass";
-  drone3Filter.frequency.value = 680;
+  drone3Filter.frequency.value = 700;
   drone3Filter.Q.value = 0.7;
-
   drone3.connect(drone3Filter);
   drone3Filter.connect(drone3Gain);
   drone3Gain.connect(bgmBus);
@@ -1105,15 +1160,12 @@ function initAudioSystem() {
   const airNoise = audioCtx.createBufferSource();
   airNoise.buffer = noiseBuffer;
   airNoise.loop = true;
-
   const airFilter = audioCtx.createBiquadFilter();
   airFilter.type = "bandpass";
   airFilter.frequency.value = 1700;
   airFilter.Q.value = 0.35;
-
   const airGain = audioCtx.createGain();
   airGain.gain.value = 0.0001;
-
   airNoise.connect(airFilter);
   airFilter.connect(airGain);
   airGain.connect(bgmBus);
@@ -1121,15 +1173,12 @@ function initAudioSystem() {
   const sparkleNoise = audioCtx.createBufferSource();
   sparkleNoise.buffer = noiseBuffer;
   sparkleNoise.loop = true;
-
   const sparkleFilter = audioCtx.createBiquadFilter();
   sparkleFilter.type = "bandpass";
   sparkleFilter.frequency.value = 3600;
   sparkleFilter.Q.value = 2.2;
-
   const sparkleGain = audioCtx.createGain();
   sparkleGain.gain.value = 0.0001;
-
   sparkleNoise.connect(sparkleFilter);
   sparkleFilter.connect(sparkleGain);
   sparkleGain.connect(bgmBus);
@@ -1141,12 +1190,10 @@ function initAudioSystem() {
   pulseDepth.gain.value = 0.012;
   pulseLFO.connect(pulseDepth);
   pulseDepth.connect(droneGain.gain);
-
   const pulseDepth2 = audioCtx.createGain();
   pulseDepth2.gain.value = 0.008;
   pulseLFO.connect(pulseDepth2);
   pulseDepth2.connect(drone2Gain.gain);
-
   const pulseDepth3 = audioCtx.createGain();
   pulseDepth3.gain.value = 0.005;
   pulseLFO.connect(pulseDepth3);
@@ -1168,7 +1215,8 @@ function initAudioSystem() {
     airGain,
     sparkleNoise,
     sparkleGain,
-    pulseLFO
+    pulseLFO,
+    startTime: 0
   };
 
   drone.start();
@@ -1184,6 +1232,10 @@ function initAudioSystem() {
 function startMysticBGM() {
   if (!audioNodes || bgmStarted) return;
   const now = audioCtx.currentTime;
+  audioNodes.startTime = now;
+  nextChordTime = now + 0.12;
+  currentSectionIndex = 0;
+
   audioNodes.droneGain.gain.cancelScheduledValues(now);
   audioNodes.drone2Gain.gain.cancelScheduledValues(now);
   audioNodes.drone3Gain.gain.cancelScheduledValues(now);
@@ -1192,18 +1244,18 @@ function startMysticBGM() {
 
   audioNodes.droneGain.gain.setValueAtTime(0.0001, now);
   audioNodes.droneGain.gain.exponentialRampToValueAtTime(0.045, now + 4.0);
-
   audioNodes.drone2Gain.gain.setValueAtTime(0.0001, now);
   audioNodes.drone2Gain.gain.exponentialRampToValueAtTime(0.028, now + 5.0);
-
   audioNodes.drone3Gain.gain.setValueAtTime(0.0001, now);
   audioNodes.drone3Gain.gain.exponentialRampToValueAtTime(0.014, now + 6.0);
-
   audioNodes.airGain.gain.setValueAtTime(0.0001, now);
   audioNodes.airGain.gain.exponentialRampToValueAtTime(0.013, now + 6.5);
-
   audioNodes.sparkleGain.gain.setValueAtTime(0.0001, now);
   audioNodes.sparkleGain.gain.exponentialRampToValueAtTime(0.006, now + 7.5);
+
+  if (musicSchedulerId) clearInterval(musicSchedulerId);
+  musicSchedulerId = setInterval(scheduleMusicAhead, 220);
+  scheduleMusicAhead();
 
   bgmStarted = true;
 }
@@ -1216,7 +1268,81 @@ function stopMysticBGM() {
     g.setValueAtTime(Math.max(g.value, 0.0001), now);
     g.exponentialRampToValueAtTime(0.0001, now + 1.8);
   }
+  if (musicSchedulerId) {
+    clearInterval(musicSchedulerId);
+    musicSchedulerId = null;
+  }
   bgmStarted = false;
+}
+
+function playChordPad(freqs, time, duration = 3.8, level = 0.04) {
+  freqs.forEach((freq, idx) => {
+    const osc = audioCtx.createOscillator();
+    osc.type = idx === 0 ? "sine" : (idx === 1 ? "triangle" : "sine");
+    osc.frequency.setValueAtTime(freq, time);
+
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 900 + idx * 180;
+    filter.Q.value = 0.5;
+
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.exponentialRampToValueAtTime(level / (1 + idx * 0.35), time + 0.7);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioNodes.bgmBus);
+
+    osc.start(time);
+    osc.stop(time + duration + 0.1);
+  });
+}
+
+function playArpNote(freq, time, duration = 0.9, level = 0.018) {
+  const osc = audioCtx.createOscillator();
+  osc.type = "triangle";
+  osc.frequency.setValueAtTime(freq, time);
+  osc.frequency.exponentialRampToValueAtTime(freq * 1.008, time + duration);
+
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0.0001, time);
+  gain.gain.exponentialRampToValueAtTime(level, time + 0.03);
+  gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+
+  const hp = audioCtx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 320;
+
+  osc.connect(hp);
+  hp.connect(gain);
+  gain.connect(audioNodes.bgmBus);
+
+  osc.start(time);
+  osc.stop(time + duration + 0.05);
+}
+
+function playSubPulse(freq, time, duration = 0.6, level = 0.012) {
+  const osc = audioCtx.createOscillator();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(freq, time);
+
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0.0001, time);
+  gain.gain.exponentialRampToValueAtTime(level, time + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+
+  const lp = audioCtx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 180;
+
+  osc.connect(lp);
+  lp.connect(gain);
+  gain.connect(audioNodes.bgmBus);
+
+  osc.start(time);
+  osc.stop(time + duration + 0.04);
 }
 
 function playMagicSE(intensity = 1, color = "blue") {
@@ -1289,10 +1415,10 @@ function playMagicSE(intensity = 1, color = "blue") {
   noise.stop(now + 0.72 * intensity);
 }
 
-function playCelestialBell(kind = "blue", volume = 0.42) {
+function playCelestialBell(kind = "blue", volume = 0.42, time = null) {
   if (!audioCtx || !audioNodes) return;
 
-  const now = audioCtx.currentTime;
+  const now = time ?? audioCtx.currentTime;
   const noteMap = {
     gold: [783.99, 1174.66, 1567.98],
     blue: [659.25, 987.77, 1318.51],
@@ -1322,6 +1448,44 @@ function playCelestialBell(kind = "blue", volume = 0.42) {
     osc.start(now + idx * 0.02);
     osc.stop(now + 2.9 + idx * 0.1);
   });
+}
+
+function scheduleMusicAhead() {
+  if (!audioCtx || !bgmStarted) return;
+  const scheduleAhead = 1.8;
+
+  while (nextChordTime < audioCtx.currentTime + scheduleAhead) {
+    const elapsed = nextChordTime - audioNodes.startTime;
+    const { section, sectionIndex, localTime } = sectionAtTime(elapsed);
+    currentSectionIndex = sectionIndex;
+
+    const chordIndex = Math.floor(localTime / section.chordDur) % section.chords.length;
+    const chordRatios = section.chords[chordIndex];
+    const freqs = chordRatios.map(r => section.root * r);
+
+    playChordPad(freqs, nextChordTime, section.chordDur * 0.96, 0.043 + sectionIndex * 0.004);
+
+    const arpPattern = [2, 1, 0, 1, 2, 1, 0, 2];
+    for (let i = 0; i < arpPattern.length; i++) {
+      const stepTime = nextChordTime + i * (section.chordDur / arpPattern.length);
+      if (Math.random() < section.arpDensity) {
+        const octave = i % 3 === 0 ? 2 : 1;
+        const freq = freqs[arpPattern[i] % freqs.length] * octave;
+        playArpNote(freq, stepTime, 0.85 + Math.random() * 0.25, 0.013 + Math.random() * 0.006);
+      }
+      if (i % 4 === 0) {
+        playSubPulse(freqs[0] * 0.5, stepTime, 0.55, 0.010 + sectionIndex * 0.002);
+      }
+    }
+
+    const absoluteBar = Math.floor(elapsed / section.chordDur);
+    const bellColor = section.colorCycle[chordIndex % section.colorCycle.length];
+    if (absoluteBar % section.bellEvery === 0) {
+      playCelestialBell(bellColor, 0.34 + sectionIndex * 0.04, nextChordTime + 0.18);
+    }
+
+    nextChordTime += section.chordDur;
+  }
 }
 
 async function startAll() {
@@ -1556,23 +1720,23 @@ function animate() {
     }
 
     const beat = Math.sin(t * 0.72) + Math.sin(t * 1.11 + 0.8);
-    if (beat > 1.72 && t - lastMagicTrigger > 5.5) {
+    if (beat > 1.72 && t - lastMagicTrigger > 6.0) {
       lastMagicTrigger = t;
       const sequence = ["gold", "blue", "red"];
-      const color = sequence[Math.floor((t / 5.5)) % sequence.length];
-      playMagicSE(0.8, color);
+      const color = sequence[Math.floor((t / 6.0)) % sequence.length];
+      playMagicSE(0.75, color);
     }
 
-    if (t - lastBellTime > 8.5) {
+    if (t - lastBellTime > 13.0) {
       lastBellTime = t;
       const bellSequence = ["blue", "gold", "red", "sky"];
-      const kind = bellSequence[Math.floor(t / 8.5) % bellSequence.length];
-      playCelestialBell(kind, 0.42);
+      const kind = bellSequence[Math.floor(t / 13.0) % bellSequence.length];
+      playCelestialBell(kind, 0.28);
     }
 
-    if (Math.sin(t * 0.22 + 0.8) > 0.998 && t - lastMagicTrigger > 2.5) {
+    if (Math.sin(t * 0.22 + 0.8) > 0.9985 && t - lastMagicTrigger > 3.0) {
       lastMagicTrigger = t;
-      playMagicSE(1.15, "sky");
+      playMagicSE(1.05, "sky");
     }
   }
 
